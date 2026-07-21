@@ -159,10 +159,26 @@ export function assertCredentialsIsolation() {
   }
 }
 
+/** Load Lead Core token from services/lead-core/.env if present. */
+function loadLeadCoreEnv() {
+  const p = path.join(ROOT, "services", "lead-core", ".env");
+  if (!fs.existsSync(p)) return;
+  for (const line of fs.readFileSync(p, "utf8").split("\n")) {
+    const t = line.trim();
+    if (!t || t.startsWith("#") || !t.includes("=")) continue;
+    const i = t.indexOf("=");
+    const k = t.slice(0, i).trim();
+    let v = t.slice(i + 1).trim().replace(/^["']|["']$/g, "");
+    if (process.env[k] === undefined && v) process.env[k] = v;
+  }
+}
+
 /** Build process env for all openclaw invocations. */
 export function ohamarEnv(extra = {}) {
   ensureDirs();
   loadDotEnv();
+  loadLeadCoreEnv();
+  const isWorker = INSTANCE === "worker";
   // Explicit instance so child processes never "guess" main from unset.
   return {
     ...process.env,
@@ -171,6 +187,16 @@ export function ohamarEnv(extra = {}) {
     OPENCLAW_CONFIG_PATH: CONFIG_PATH,
     // Fail-closed for zaloclaw: never fall back to ~/.openclaw when set
     OHAMAR_CREDENTIALS_FAIL_CLOSED: "1",
+    // Lead Core bridge (feature/lead-core-vicamed-watch)
+    LEAD_CORE_URL: process.env.LEAD_CORE_URL || "http://127.0.0.1:18792",
+    LEAD_CORE_ENFORCE:
+      process.env.LEAD_CORE_ENFORCE ||
+      (process.env.LEAD_CORE_TOKEN ? "1" : "0"),
+    LEAD_CORE_CALLER:
+      process.env.LEAD_CORE_CALLER || (isWorker ? "minh_phat" : "gia_huy"),
+    LEAD_CORE_CHANNEL:
+      process.env.LEAD_CORE_CHANNEL ||
+      (isWorker ? "zalo_worker" : "zalo_main"),
     ...extra,
   };
 }

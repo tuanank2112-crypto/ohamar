@@ -86,6 +86,26 @@ npm run lead-core:gate -- \
 # exit 0 ALLOWED · exit 2 DENIED
 ```
 
+## Wire into Zalo gateways (hard enforce)
+
+```bash
+# 1) Lead Core up
+npm run lead-core:start
+
+# 2) Patch zaloclaw + rebuild dist (idempotent)
+npm run lead-core:apply-bridge
+
+# 3) Restart both bots (env injects LEAD_CORE_* via scripts/env.mjs)
+npm run stop && npm run start
+npm run stop:worker && npm run start:worker
+# or: npm run stack:start
+```
+
+When `LEAD_CORE_TOKEN` is set, `ohamarEnv` sets **`LEAD_CORE_ENFORCE=1`** by default:
+
+- **Inbound** → auto `POST /v1/events`
+- **Outbound** → must pass Core or send returns `Lead Core blocked send: …`
+
 ## Cron (Vicamed watch)
 
 Gateway **main** must be running:
