@@ -29,7 +29,12 @@ function start(name, command, args, logFile) {
   return child.pid;
 }
 
-console.log("🦞 Ohamar stack: Lead Core + main + worker");
+const withFb = process.argv.includes("--fb");
+
+console.log(
+  "🦞 Ohamar stack: Lead Core + main + worker" +
+    (withFb ? " + FB Messenger" : ""),
+);
 start(
   "lead-core",
   process.execPath,
@@ -40,8 +45,23 @@ await new Promise((r) => setTimeout(r, 1000));
 start("main", "npm", ["run", "start"], "/tmp/ohamar-main.log");
 start("worker", "npm", ["run", "start:worker"], "/tmp/ohamar-worker.log");
 
+if (withFb) {
+  const fbEnv = path.join(ROOT, "services/fb-messenger/.env");
+  if (!fs.existsSync(fbEnv)) {
+    console.warn("⚠️  services/fb-messenger/.env missing — skip FB");
+  } else {
+    start(
+      "fb-messenger",
+      process.execPath,
+      [path.join(ROOT, "services/fb-messenger/src/server.mjs")],
+      "/tmp/ohamar-fb.log",
+    );
+  }
+}
+
 console.log(`
 Check:
   curl -s http://127.0.0.1:18792/v1/health
   sleep 3 && npm run health && npm run health:worker
+  ${withFb ? "curl -s http://127.0.0.1:18793/health" : "FB: npm run stack:start -- --fb"}
 `);

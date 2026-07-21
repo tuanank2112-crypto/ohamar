@@ -1,0 +1,14 @@
+{
+  "name": "@ohamar/fb-messenger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Facebook Page Messenger adapter → Lead Core (Phase 2 scaffold)",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "health": "node src/health-cli.mjs"
+  }
+}

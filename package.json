@@ -57,7 +57,10 @@
     "lead-core:backup-cron": "node services/lead-core/src/backup.mjs",
     "stack:start": "node scripts/start-stack.mjs",
     "lead-core:backup-daily": "node services/lead-core/src/backup.mjs",
-    "lead-core:apply-bridge": "node services/lead-core/apply-zaloclaw-bridge.mjs"
+    "lead-core:apply-bridge": "node services/lead-core/apply-zaloclaw-bridge.mjs",
+    "lead-core:doctor": "node services/lead-core/src/doctor.mjs",
+    "fb:start": "node services/fb-messenger/src/server.mjs",
+    "fb:health": "node services/fb-messenger/src/health-cli.mjs"
   },
   "dependencies": {
     "openclaw": "^2026.7.1"

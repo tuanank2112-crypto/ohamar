@@ -20,4 +20,6 @@ vendor/zaloclaw/node_modules/
 services/lead-core/data/
 services/lead-core/*.db
 services/lead-core/*.db-*
+# fb local
+services/fb-messenger/.env
 vendor/
