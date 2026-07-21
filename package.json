@@ -1,0 +1,60 @@
+{
+  "name": "ohamar",
+  "version": "1.0.0",
+  "description": "Ohamar — Personal AI assistant (local). OpenClaw core + ZaloClaw channel, branded and isolated for self-host.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "bin": {
+    "ohamar": "./bin/ohamar.mjs"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "OHAMAR_INSTANCE=main node scripts/start.mjs",
+    "stop": "OHAMAR_INSTANCE=main node scripts/stop.mjs",
+    "start:worker": "OHAMAR_INSTANCE=worker node scripts/start.mjs",
+    "stop:worker": "OHAMAR_INSTANCE=worker node scripts/stop.mjs",
+    "status": "OHAMAR_INSTANCE=main node scripts/status.mjs",
+    "status:worker": "OHAMAR_INSTANCE=worker node scripts/status.mjs",
+    "health": "OHAMAR_INSTANCE=main node scripts/health.mjs",
+    "health:worker": "OHAMAR_INSTANCE=worker node scripts/health.mjs",
+    "watchdog": "OHAMAR_INSTANCE=main node scripts/watchdog.mjs",
+    "watchdog:worker": "OHAMAR_INSTANCE=worker node scripts/watchdog.mjs",
+    "backup": "node scripts/backup.mjs all",
+    "backup:main": "node scripts/backup.mjs main",
+    "backup:worker": "node scripts/backup.mjs worker",
+    "cleanup:legacy": "node scripts/cleanup-legacy.mjs",
+    "zalo:login": "OHAMAR_INSTANCE=main node scripts/zalo-login.mjs",
+    "zalo:login:worker": "OHAMAR_INSTANCE=worker node scripts/zalo-login.mjs",
+    "dashboard": "OHAMAR_INSTANCE=main node scripts/dashboard.mjs",
+    "dashboard:worker": "OHAMAR_INSTANCE=worker node scripts/dashboard.mjs",
+    "agent": "OHAMAR_INSTANCE=main node scripts/agent.mjs",
+    "agent:worker": "OHAMAR_INSTANCE=worker node scripts/agent.mjs",
+    "doctor": "OHAMAR_INSTANCE=main node scripts/doctor.mjs",
+    "doctor:worker": "OHAMAR_INSTANCE=worker node scripts/doctor.mjs",
+    "cli": "OHAMAR_INSTANCE=main node scripts/cli.mjs",
+    "cli:worker": "OHAMAR_INSTANCE=worker node scripts/cli.mjs",
+    "postinstall": "node scripts/postinstall.mjs",
+    "cards:validate": "node scripts/validate-product-cards.mjs --brand vicamed",
+    "cards:export": "node scripts/cards-export.mjs",
+    "cards:gap": "node scripts/sheet-gap-report.mjs",
+    "cards:cases": "node scripts/cards-cases.mjs",
+    "cards:cases:vicamed": "node scripts/cards-cases.mjs workspace/brand-kits/vicamed/Database_Chatbot.xlsx",
+    "cases:index": "node scripts/rebuild-case-index.mjs",
+    "drive:doctor": "node scripts/drive-doctor.mjs"
+  },
+  "dependencies": {
+    "openclaw": "^2026.7.1"
+  },
+  "ohamar": {
+    "defaultPort": 18789,
+    "stateDir": "./data",
+    "workspace": "./workspace",
+    "plugins": [
+      "vendor/zaloclaw"
+    ]
+  }
+}

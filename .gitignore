@@ -1,0 +1,23 @@
+node_modules/
+data/
+data-worker/
+workspace/
+!workspace/.gitkeep
+workspace-worker/
+!workspace-worker/.gitkeep
+backups/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+vendor/zaloclaw/node_modules/
+# secrets
+**/google-drive-sa.json
+**/secrets/**
+!**/secrets/README.md
+# lead-core local db
+services/lead-core/data/
+services/lead-core/*.db
+services/lead-core/*.db-*
+vendor/
