@@ -1,0 +1,16 @@
+{
+  "name": "@ohamar/lead-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Vicamed Lead/Conversation Core — SQLite WAL + local HTTP API (ownership, dedup, consent, audit)",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "migrate": "node src/migrate.mjs",
+    "backup": "node src/backup.mjs",
+    "health": "node src/health-cli.mjs"
+  }
+}

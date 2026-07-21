@@ -44,7 +44,13 @@
     "cards:cases": "node scripts/cards-cases.mjs",
     "cards:cases:vicamed": "node scripts/cards-cases.mjs workspace/brand-kits/vicamed/Database_Chatbot.xlsx",
     "cases:index": "node scripts/rebuild-case-index.mjs",
-    "drive:doctor": "node scripts/drive-doctor.mjs"
+    "drive:doctor": "node scripts/drive-doctor.mjs",
+    "lead-core:migrate": "node services/lead-core/src/migrate.mjs",
+    "lead-core:start": "node services/lead-core/src/server.mjs",
+    "lead-core:backup": "node services/lead-core/src/backup.mjs",
+    "lead-core:watch": "node services/lead-core/src/watch.mjs",
+    "lead-core:health": "node services/lead-core/src/health-cli.mjs",
+    "lead-core:install-skills": "node services/lead-core/install-skills.mjs"
   },
   "dependencies": {
     "openclaw": "^2026.7.1"
