@@ -49,8 +49,12 @@
     "lead-core:start": "node services/lead-core/src/server.mjs",
     "lead-core:backup": "node services/lead-core/src/backup.mjs",
     "lead-core:watch": "node services/lead-core/src/watch.mjs",
+    "lead-core:watch-cron": "node services/lead-core/src/watch-cron.mjs",
     "lead-core:health": "node services/lead-core/src/health-cli.mjs",
-    "lead-core:install-skills": "node services/lead-core/install-skills.mjs"
+    "lead-core:install-skills": "node services/lead-core/install-skills.mjs",
+    "lead-core:register-cron": "node services/lead-core/src/register-cron.mjs",
+    "lead-core:gate": "node services/lead-core/src/outbound-gate.mjs",
+    "lead-core:backup-cron": "node services/lead-core/src/backup.mjs"
   },
   "dependencies": {
     "openclaw": "^2026.7.1"

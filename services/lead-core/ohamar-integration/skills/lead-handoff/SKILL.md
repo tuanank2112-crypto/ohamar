@@ -96,8 +96,25 @@ POST /v1/handoffs
 }
 ```
 
+## Gate CLI (cứng — ưu tiên hơn curl tay)
+
+```bash
+# Trước MỌI tin Zalo ra (khi đã bật Lead Core):
+npm run lead-core:gate -- \
+  --caller minh_phat \
+  --channel zalo_worker \
+  --user-id <uid> \
+  --thread-id <thread> \
+  --message-id <unique> \
+  --text "..." \
+  --claim --json
+
+# exit 0 = ALLOWED → mới zaloclaw send
+# exit 2 = DENIED → KHÔNG gửi
+```
+
 ## Anti-patterns
 
-- Gửi Zalo khi outbound 409  
+- Gửi Zalo khi gate exit 2 / outbound 409  
 - Bịa lead / bỏ Core  
 - Update đè consent (phải withdraw + grant mới)  

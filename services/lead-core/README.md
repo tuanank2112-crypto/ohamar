@@ -75,6 +75,30 @@ Copies skills into `workspace/skills/` and `workspace-worker/skills/` (gitignore
 
 Approver: **Vicamed**. Watch never auto-promotes web content into claims.
 
+## Outbound gate (hard)
+
+```bash
+npm run lead-core:gate -- \
+  --caller minh_phat \
+  --channel zalo_worker \
+  --user-id UID --thread-id TID --message-id MID \
+  --text "..." --claim --json
+# exit 0 ALLOWED · exit 2 DENIED
+```
+
+## Cron (Vicamed watch)
+
+Gateway **main** must be running:
+
+```bash
+npm run lead-core:register-cron
+# optional: --to <zaloOwnerId>   default 5139686145106992704
+npm run cli -- cron list
+```
+
+Schedule: `0 9,17 * * *` `Asia/Ho_Chi_Minh`.  
+Unchanged → stdout `NO_REPLY` (no spam). Changed → digest announce.
+
 ## Export / merge
 
 This work lives on **`feature/lead-core-vicamed-watch`**.  
