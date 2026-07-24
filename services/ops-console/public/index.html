@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ohamar Ops — Sales takeover</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Ohamar Ops · AI-first + Sale takeover</h1>
+        <div class="meta">
+          Demo local · Idle auto-resume: <span id="idle-label">…</span>
+          · Gửi tin = nick bot (demo store, chưa Zalo thật)
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="ghost" id="btn-refresh">Làm mới</button>
+        <button type="button" class="ghost" id="btn-reset">Reset demo</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="col">
+        <h2>Hội thoại (2 bot demo)</h2>
+        <div id="thread-list"></div>
+      </aside>
+
+      <main class="col">
+        <div id="chat-head"></div>
+        <div id="banner"></div>
+        <div class="messages" id="messages"></div>
+        <div class="composer" id="composer" style="display: none">
+          <textarea
+            id="msg-input"
+            placeholder="Sale chat bằng nick bot… (Enter gửi, Shift+Enter xuống dòng)"
+          ></textarea>
+          <button type="button" class="primary" id="btn-send">Gửi</button>
+        </div>
+      </main>
+
+      <aside class="col">
+        <h2>Event log</h2>
+        <div class="events" id="events"></div>
+      </aside>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

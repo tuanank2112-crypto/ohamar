@@ -60,7 +60,9 @@
     "lead-core:apply-bridge": "node services/lead-core/apply-zaloclaw-bridge.mjs",
     "lead-core:doctor": "node services/lead-core/src/doctor.mjs",
     "fb:start": "node services/fb-messenger/src/server.mjs",
-    "fb:health": "node services/fb-messenger/src/health-cli.mjs"
+    "fb:health": "node services/fb-messenger/src/health-cli.mjs",
+    "ops-console": "OPS_IDLE_SEC=60 node services/ops-console/src/server.mjs",
+    "ops-console:prod-idle": "OPS_IDLE_SEC=480 node services/ops-console/src/server.mjs"
   },
   "dependencies": {
     "openclaw": "^2026.7.1"

@@ -20,6 +20,8 @@ vendor/zaloclaw/node_modules/
 services/lead-core/data/
 services/lead-core/*.db
 services/lead-core/*.db-*
+# ops-console demo store
+services/ops-console/data/
 # fb local
 services/fb-messenger/.env
 vendor/
