@@ -210,11 +210,65 @@ body {
 .ops-avatar[data-bot="worker"] {
   background: linear-gradient(145deg, #60a5fa, #2dd4bf);
 }
+.ops-avatar.group {
+  background: linear-gradient(145deg, #34d399, #0ea5e9);
+  font-size: 16px;
+}
 .ops-avatar.lg {
   width: 40px;
   height: 40px;
   font-size: 12px;
   border-radius: 12px;
+}
+.ops-avatar.lg.group {
+  font-size: 18px;
+}
+.ops-group-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+  color: #6ee7b7;
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.28);
+}
+.ops-pin {
+  margin-right: 4px;
+  font-size: 11px;
+}
+.ops-conv.unread .ops-conv__name {
+  font-weight: 750;
+  color: #fff;
+}
+.ops-conv.unread .ops-conv__preview {
+  color: var(--mc-ink);
+  font-weight: 550;
+}
+.ops-conv.pinned {
+  background: rgba(108, 125, 232, 0.06);
+}
+.ops-unread {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #0068ff;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Zalo-ish: group bubbles show sender name more clearly */
+.ops-bubble.group.customer .who,
+.ops-bubble.group.ai .who {
+  color: var(--mc-cyan);
+  opacity: 1;
+  font-weight: 700;
 }
 .ops-conv__row {
   display: flex;

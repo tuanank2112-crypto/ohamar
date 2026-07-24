@@ -13,6 +13,8 @@ const selectedId = ref(null);
 const detail = ref(null);
 const events = ref([]);
 const botFilter = ref("all");
+/** all | dm | group */
+const typeFilter = ref("all");
 const search = ref("");
 const draft = ref("");
 const busy = ref(false);
@@ -33,15 +35,25 @@ let toastTimer = null;
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase();
-  return threads.value.filter((t) => {
-    if (botFilter.value !== "all" && t.bot !== botFilter.value) return false;
-    if (!q) return true;
-    return (
-      (t.peer_name || "").toLowerCase().includes(q) ||
-      (t.last_preview || "").toLowerCase().includes(q) ||
-      (t.bot_label || "").toLowerCase().includes(q)
-    );
-  });
+  return threads.value
+    .filter((t) => {
+      if (botFilter.value !== "all" && t.bot !== botFilter.value) return false;
+      const typ = t.thread_type || "dm";
+      if (typeFilter.value === "dm" && typ !== "dm") return false;
+      if (typeFilter.value === "group" && typ !== "group") return false;
+      if (!q) return true;
+      return (
+        (t.peer_name || "").toLowerCase().includes(q) ||
+        (t.list_preview || t.last_preview || "").toLowerCase().includes(q) ||
+        (t.bot_label || "").toLowerCase().includes(q)
+      );
+    })
+    .slice()
+    .sort((a, b) => {
+      // Zalo-ish: pinned first, then activity
+      if (a.pinned_chat !== b.pinned_chat) return a.pinned_chat ? -1 : 1;
+      return a.last_activity_at < b.last_activity_at ? 1 : -1;
+    });
 });
 
 const thread = computed(() => detail.value?.thread || null);
@@ -93,15 +105,23 @@ function fmtRelative(iso) {
   if (sec < 86400) return `${Math.floor(sec / 3600)} giờ`;
   return fmtTime(iso);
 }
-function who(role) {
-  if (role === "customer") return "Khách";
-  if (role === "sale") return "Sale · nick bot";
-  return "AI bot";
+function who(m, threadObj) {
+  if (m.role === "sale") return m.sender_name || "Sale · nick bot";
+  if (m.role === "ai") return m.sender_name || "AI bot";
+  // customer / member
+  if (threadObj?.is_group || threadObj?.thread_type === "group") {
+    return m.sender_name || "Thành viên";
+  }
+  return m.sender_name || threadObj?.peer_name || "Khách";
 }
 function initials(name) {
-  const p = String(name || "?").trim().split(/\s+/);
+  const p = String(name || "?").trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return "?";
   if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
   return (p[0][0] + p[p.length - 1][0]).toUpperCase();
+}
+function isGroup(t) {
+  return t && (t.is_group || t.thread_type === "group");
 }
 
 function showToast(msg, kind = "ok") {
@@ -222,14 +242,28 @@ function resume() {
   });
 }
 function simCustomer() {
-  const text = prompt("Tin khách (demo):", "Cho chị hỏi thêm về liệu trình ạ");
+  const t = thread.value;
+  let sender_name;
+  if (isGroup(t)) {
+    const sn = prompt("Tên thành viên gửi (nhóm):", "Huyền");
+    if (sn == null) return;
+    sender_name = sn.trim() || "Thành viên";
+  }
+  const text = prompt(
+    isGroup(t) ? "Nội dung tin trong nhóm:" : "Tin khách (demo):",
+    isGroup(t) ? "@bot lịch live tối nay chốt chưa ạ?" : "Cho chị hỏi thêm về liệu trình ạ",
+  );
   if (text == null) return;
   const trimmed = text.trim();
   if (!trimmed) return;
   forceScrollNext.value = true;
-  return act(() => opsApi.simCustomer(selectedId.value, trimmed), {
-    successToast: "Đã giả lập tin khách",
-  });
+  return act(
+    () =>
+      opsApi.simCustomer(selectedId.value, trimmed, sender_name
+        ? { sender_name }
+        : undefined),
+    { successToast: isGroup(t) ? "Tin nhóm (demo)" : "Đã giả lập tin khách" },
+  );
 }
 async function send() {
   const text = draft.value.trim();
@@ -419,6 +453,35 @@ watch(selectedId, () => {
                 aria-label="Tìm hội thoại"
               />
             </div>
+            <div class="ops-chips" role="group" aria-label="Loại hội thoại">
+              <button
+                type="button"
+                class="ops-chip"
+                :class="{ active: typeFilter === 'all' }"
+                :aria-pressed="typeFilter === 'all'"
+                @click="typeFilter = 'all'"
+              >
+                Tất cả
+              </button>
+              <button
+                type="button"
+                class="ops-chip"
+                :class="{ active: typeFilter === 'dm' }"
+                :aria-pressed="typeFilter === 'dm'"
+                @click="typeFilter = 'dm'"
+              >
+                Chat 1-1
+              </button>
+              <button
+                type="button"
+                class="ops-chip"
+                :class="{ active: typeFilter === 'group' }"
+                :aria-pressed="typeFilter === 'group'"
+                @click="typeFilter = 'group'"
+              >
+                Nhóm
+              </button>
+            </div>
             <div class="ops-chips" role="group" aria-label="Lọc nick bot">
               <button
                 type="button"
@@ -427,7 +490,7 @@ watch(selectedId, () => {
                 :aria-pressed="botFilter === 'all'"
                 @click="botFilter = 'all'"
               >
-                Tất cả nick
+                Mọi nick
               </button>
               <button
                 type="button"
@@ -460,32 +523,50 @@ watch(selectedId, () => {
               :key="t.id"
               type="button"
               class="ops-conv"
-              :class="{ active: selectedId === t.id }"
+              :class="{
+                active: selectedId === t.id,
+                unread: t.unread > 0,
+                pinned: t.pinned_chat,
+              }"
               :aria-current="selectedId === t.id ? 'true' : undefined"
               @click="selectThread(t.id)"
             >
               <div class="ops-conv__row">
-                <div class="ops-avatar" :data-bot="t.bot">{{ initials(t.peer_name) }}</div>
+                <div
+                  class="ops-avatar"
+                  :class="{ group: isGroup(t) }"
+                  :data-bot="t.bot"
+                >
+                  <template v-if="isGroup(t)">👥</template>
+                  <template v-else>{{ initials(t.peer_name) }}</template>
+                </div>
                 <div class="ops-conv__body">
                   <div class="ops-conv__top">
-                    <div class="ops-conv__name">{{ t.peer_name }}</div>
+                    <div class="ops-conv__name">
+                      <span v-if="t.pinned_chat" class="ops-pin" title="Ghim">📌</span>
+                      {{ t.peer_name }}
+                      <span v-if="isGroup(t)" class="ops-group-tag">Nhóm</span>
+                    </div>
                     <div class="ops-conv__time">{{ fmtRelative(t.last_activity_at) }}</div>
                   </div>
                   <div class="ops-conv__bot">
                     <span class="ops-dot" :class="{ worker: t.bot === 'worker' }" />
                     {{ t.bot_label }}
+                    <template v-if="isGroup(t)">
+                      · {{ t.member_count || 0 }} thành viên
+                    </template>
                   </div>
-                  <div class="ops-conv__preview">{{ t.last_preview }}</div>
+                  <div class="ops-conv__preview">{{ t.list_preview || t.last_preview }}</div>
                   <div class="ops-conv__foot">
                     <span class="ops-badge" :class="modeClass(t.ai_mode)">{{
                       modeLabel(t.ai_mode)
                     }}</span>
-                    <span class="ops-meta">
+                    <span v-if="t.unread > 0" class="ops-unread">{{ t.unread }}</span>
+                    <span v-else class="ops-meta">
                       <template v-if="t.ai_mode === 'human_paused'"
                         >AI {{ t.resume_in_sec }}s</template
                       >
                       <template v-else-if="t.ai_mode === 'human_pinned'">Pinned</template>
-                      <template v-else>{{ t.message_count || 0 }} tin</template>
                     </span>
                   </div>
                 </div>
@@ -512,12 +593,25 @@ watch(selectedId, () => {
               <div class="ops-msg-head__left">
                 <button type="button" class="ops-back" @click="backToList">← Danh sách</button>
                 <div class="ops-msg-title-row">
-                  <div class="ops-avatar lg" :data-bot="thread.bot">
-                    {{ initials(thread.peer_name) }}
+                  <div
+                    class="ops-avatar lg"
+                    :class="{ group: isGroup(thread) }"
+                    :data-bot="thread.bot"
+                  >
+                    <template v-if="isGroup(thread)">👥</template>
+                    <template v-else>{{ initials(thread.peer_name) }}</template>
                   </div>
                   <div>
-                    <h3>{{ thread.peer_name }}</h3>
-                    <div class="sub">{{ thread.bot_label }} · {{ thread.thread_id }}</div>
+                    <h3>
+                      {{ thread.peer_name }}
+                      <span v-if="isGroup(thread)" class="ops-group-tag">Nhóm</span>
+                    </h3>
+                    <div class="sub">
+                      <template v-if="isGroup(thread)"
+                        >{{ thread.member_count }} thành viên · nick {{ thread.bot_label }}</template
+                      >
+                      <template v-else>Chat 1-1 · {{ thread.bot_label }}</template>
+                    </div>
                   </div>
                 </div>
               </div>

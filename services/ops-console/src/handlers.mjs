@@ -53,10 +53,25 @@ function enrich(s, t) {
     const elapsed = (Date.now() - new Date(t.last_activity_at).getTime()) / 1000;
     resume_in_sec = Math.max(0, Math.ceil(IDLE_SEC - elapsed));
   }
+  const isGroup = (t.thread_type || "dm") === "group";
+  const lastSender = last?.sender_name || t.last_sender_name || null;
+  const previewBody = last?.text || t.last_preview || "";
+  // Zalo-style list: "Name: message" for groups
+  const list_preview =
+    isGroup && lastSender
+      ? `${lastSender}: ${previewBody}`
+      : previewBody;
   return {
     ...t,
+    thread_type: t.thread_type || "dm",
+    is_group: isGroup,
+    member_count: t.member_count || (isGroup ? 0 : 2),
+    unread: t.unread || 0,
+    pinned_chat: Boolean(t.pinned_chat),
     message_count: msgs.length,
-    last_preview: last?.text || t.last_preview,
+    last_sender_name: lastSender,
+    last_preview: previewBody,
+    list_preview,
     resume_in_sec,
     ai_should_reply: t.ai_mode === "ai_active",
   };
@@ -155,14 +170,16 @@ export function sendAsBot(id, body = {}) {
     id: uuid(),
     thread_pk: id,
     role: "sale",
+    sender_name: t.bot_label || "Sale",
     text,
     at,
     actor,
-    // demo flag — production: sent via zaloclaw
     delivery: "demo_local",
   };
   s.messages.push(msg);
   t.last_preview = text;
+  t.last_sender_name = msg.sender_name;
+  t.unread = 0;
   touch(t, at);
   audit(s, id, "sale_send", actor, { text: text.slice(0, 120) });
   saveStore(s);
@@ -180,29 +197,38 @@ export function simCustomer(id, body = {}) {
   }
   const text = String(body.text || "Khách nhắn demo…").trim();
   const at = nowIso();
+  const isGroup = (t.thread_type || "dm") === "group";
+  const senderName =
+    String(body.sender_name || "").trim() ||
+    (isGroup ? "Thành viên" : t.peer_name || "Khách");
   const msg = {
     id: uuid(),
     thread_pk: id,
     role: "customer",
+    sender_name: senderName,
     text,
     at,
   };
   s.messages.push(msg);
   t.last_preview = text;
+  t.last_sender_name = senderName;
+  t.unread = (t.unread || 0) + 1;
   touch(t, at);
 
-  // If AI active, optionally append fake AI reply for demo UX
   let aiMsg = null;
   if (t.ai_mode === "ai_active" && body.auto_ai !== false) {
+    const mention = isGroup ? `@${senderName} ` : "";
     aiMsg = {
       id: uuid(),
       thread_pk: id,
       role: "ai",
-      text: `[AI demo] Dạ em nhận được: “${text.slice(0, 80)}”. Em hỗ trợ tiếp ạ.`,
+      sender_name: t.bot_label || "Bot",
+      text: `[AI demo] ${mention}Dạ em nhận được: “${text.slice(0, 80)}”. Em hỗ trợ tiếp ạ.`,
       at: new Date(Date.now() + 500).toISOString(),
     };
     s.messages.push(aiMsg);
     t.last_preview = aiMsg.text;
+    t.last_sender_name = aiMsg.sender_name;
     touch(t, aiMsg.at);
   } else if (t.ai_mode !== "ai_active") {
     audit(s, id, "customer_while_paused", "customer", { text: text.slice(0, 80) });

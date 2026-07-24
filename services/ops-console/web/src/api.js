@@ -69,10 +69,10 @@ export const opsApi = {
       method: "POST",
       body: JSON.stringify({ text, actor }),
     }),
-  simCustomer: (id, text) =>
+  simCustomer: (id, text, extra = {}) =>
     request(`/v1/threads/${enc(id)}/sim-customer`, {
       method: "POST",
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, ...extra }),
     }),
   events: () => request("/v1/events"),
   reset: () => request("/v1/demo/reset", { method: "POST", body: "{}" }),
