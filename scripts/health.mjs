@@ -19,7 +19,9 @@ import {
   WORKSPACE,
   isPidAlive,
   loadDotEnv,
+  readJsonFile,
   readPidFile,
+  stripBomFromJsonFile,
 } from "./env.mjs";
 
 loadDotEnv();
@@ -43,7 +45,9 @@ function checkPort(p) {
 
 function readConfig() {
   try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    // Auto-heal UTF-8 BOM that Windows editors inject
+    stripBomFromJsonFile(CONFIG_PATH);
+    return readJsonFile(CONFIG_PATH);
   } catch {
     return null;
   }

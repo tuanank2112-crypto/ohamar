@@ -18,14 +18,25 @@ import {
   assertOpenclawInstalled,
   clearPidFile,
   ohamarEnv,
+  stripBomFromJsonFile,
   writePidFile,
 } from "./env.mjs";
+import { relocateOpenclawConfig } from "./relocate-config.mjs";
 
 assertOpenclawInstalled();
 if (!fs.existsSync(CONFIG_PATH)) {
   console.error("Chưa setup. Chạy: npm run setup");
   process.exit(1);
 }
+
+// Heal BOM + Linux/WSL → Windows path rewrite in openclaw.json
+try {
+  stripBomFromJsonFile(CONFIG_PATH);
+} catch (e) {
+  console.error(`❌ openclaw.json invalid JSON: ${e.message}`);
+  process.exit(1);
+}
+relocateOpenclawConfig();
 
 assertCredentialsIsolation();
 

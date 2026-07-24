@@ -4,6 +4,8 @@
  *
  * Instance (required for production scripts):
  *   OHAMAR_INSTANCE=main|worker
+ * Also inferred from npm lifecycle (start:worker → worker) so Windows cmd works
+ * without Unix-style `VAR=value command` in package.json.
  * Legacy alias "default" → main (with warning). Unset only allowed when
  * OHAMAR_ALLOW_UNSET_INSTANCE=1 (dev); otherwise scripts set it explicitly.
  */
@@ -15,7 +17,20 @@ import net from "node:net";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(__dirname, "..");
 
-const rawInstance = (process.env.OHAMAR_INSTANCE || "").trim().toLowerCase();
+/** Infer main|worker from `npm run …` name when env is not set (Windows-safe). */
+function instanceFromNpmLifecycle() {
+  const life = (process.env.npm_lifecycle_event || "").trim().toLowerCase();
+  if (!life) return "";
+  if (life === "worker" || life.endsWith(":worker")) return "worker";
+  // npm scripts that intentionally target main (start, stop, zalo:login, …)
+  return "main";
+}
+
+const rawInstance = (
+  process.env.OHAMAR_INSTANCE ||
+  instanceFromNpmLifecycle() ||
+  ""
+).trim().toLowerCase();
 const ALLOW_UNSET = process.env.OHAMAR_ALLOW_UNSET_INSTANCE === "1";
 
 function resolveInstance(raw) {
@@ -39,6 +54,8 @@ function resolveInstance(raw) {
 }
 
 export const INSTANCE = resolveInstance(rawInstance);
+// Ensure children / ohamarEnv always see a concrete value (esp. Windows npm).
+process.env.OHAMAR_INSTANCE = INSTANCE;
 export const IS_WORKER = INSTANCE === "worker";
 export const BOT_LABEL = IS_WORKER ? "Minh Phát (worker)" : "Gia Huy (main)";
 
@@ -88,9 +105,37 @@ export function ensureDirs() {
   }
 }
 
+/** Strip UTF-8 BOM (U+FEFF) — Windows editors often inject this and break JSON.parse. */
+export function stripBom(text) {
+  if (typeof text !== "string" || !text.length) return text;
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+/** Read + JSON.parse a file, tolerating UTF-8 BOM. */
+export function readJsonFile(filePath) {
+  const raw = stripBom(fs.readFileSync(filePath, "utf8"));
+  return JSON.parse(raw);
+}
+
+/**
+ * If file has BOM or is valid JSON with BOM, rewrite as clean UTF-8 (no BOM).
+ * @returns {boolean} true if file was rewritten
+ */
+export function stripBomFromJsonFile(filePath) {
+  if (!fs.existsSync(filePath)) return false;
+  const buf = fs.readFileSync(filePath);
+  const hasBom =
+    buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
+  if (!hasBom) return false;
+  const text = stripBom(buf.toString("utf8"));
+  JSON.parse(text); // throw if invalid after strip
+  fs.writeFileSync(filePath, text, { encoding: "utf8" });
+  return true;
+}
+
 export function loadDotEnv() {
   if (!fs.existsSync(ENV_PATH)) return;
-  const text = fs.readFileSync(ENV_PATH, "utf8");
+  const text = stripBom(fs.readFileSync(ENV_PATH, "utf8"));
   for (const line of text.split("\n")) {
     const t = line.trim();
     if (!t || t.startsWith("#")) continue;

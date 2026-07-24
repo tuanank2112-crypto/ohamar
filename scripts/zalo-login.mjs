@@ -10,7 +10,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
+  BOT_LABEL,
   DEFAULT_PORT,
+  INSTANCE,
+  IS_WORKER,
   OPENCLAW_BIN,
   ROOT,
   STATE_DIR,
@@ -20,9 +23,6 @@ import {
 
 assertOpenclawInstalled();
 
-const INSTANCE = (process.env.OHAMAR_INSTANCE || "default").trim();
-const IS_WORKER = INSTANCE === "worker";
-const BOT_LABEL = IS_WORKER ? "Minh Phát (worker)" : "Gia Huy (main)";
 const START_CMD = IS_WORKER ? "npm run start:worker" : "npm run start";
 const STOP_CMD = IS_WORKER ? "npm run stop:worker" : "npm run stop";
 const LOGIN_CMD = IS_WORKER ? "npm run zalo:login:worker" : "npm run zalo:login";
