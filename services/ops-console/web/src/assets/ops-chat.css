@@ -582,6 +582,44 @@ body {
   cursor: pointer;
 }
 
+/*
+ * Neutralize monarch.css fixed shell so ops-chat grid layout works.
+ * monarch: sidebar fixed + workspace padding-left + topbar fixed
+ * ops-chat: .mc-app-shell = CSS grid (sidebar | workspace)
+ * Mixing both double-counts offsets → content width ~0, horizontal scroll.
+ * ops-chat.css loads after monarch.css → these overrides win.
+ */
+.mc-sidebar {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: auto;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.mc-workspace {
+  padding-left: 0;
+  min-height: 0;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.mc-topbar {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  z-index: 1;
+}
+.mc-app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 @media (max-width: 1100px) {
   .ops-chat-grid {
     grid-template-columns: 300px 1fr;
