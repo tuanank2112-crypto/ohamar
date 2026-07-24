@@ -3,49 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ohamar Ops — Sales takeover</title>
+    <title>Ohamar · Inbox ops</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <header>
-      <div>
-        <h1>Ohamar Ops · AI-first + Sale takeover</h1>
-        <div class="meta">
-          Demo local · Idle auto-resume: <span id="idle-label">…</span>
-          · Gửi tin = nick bot (demo store, chưa Zalo thật)
+    <div class="shell">
+      <!-- Monarch-style sidebar -->
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">O</div>
+          <div class="brand-copy">
+            <strong>Ohamar</strong>
+            <span>Ops console · demo</span>
+          </div>
         </div>
-      </div>
-      <div class="actions">
-        <button type="button" class="ghost" id="btn-refresh">Làm mới</button>
-        <button type="button" class="ghost" id="btn-reset">Reset demo</button>
-      </div>
-    </header>
 
-    <div class="layout">
-      <aside class="col">
-        <h2>Hội thoại (2 bot demo)</h2>
-        <div id="thread-list"></div>
+        <div class="org">
+          <div class="org-av">V</div>
+          <div>
+            <span>Không gian</span>
+            <strong>Vicamed</strong>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Menu">
+          <div class="nav-label">Làm việc</div>
+          <div class="nav-item active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Inbox ops</span>
+          </div>
+          <div class="nav-item" style="opacity:0.45">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Contacts</span>
+          </div>
+          <div class="nav-item" style="opacity:0.45">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            <span>Analytics</span>
+          </div>
+          <div class="nav-label">Bot</div>
+          <div class="nav-item" style="opacity:0.45">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+            <span>Gia Huy · Minh Phát</span>
+          </div>
+        </nav>
+
+        <div class="sidebar-foot">
+          <p class="hint">
+            AI-first · Sale takeover trên nick bot.<br />
+            Gửi tin demo local (chưa Zalo thật).
+          </p>
+          <button type="button" class="btn btn-ghost" id="btn-reset" style="width:100%">Reset demo data</button>
+        </div>
       </aside>
 
-      <main class="col">
-        <div id="chat-head"></div>
-        <div id="banner"></div>
-        <div class="messages" id="messages"></div>
-        <div class="composer" id="composer" style="display: none">
-          <textarea
-            id="msg-input"
-            placeholder="Sale chat bằng nick bot… (Enter gửi, Shift+Enter xuống dòng)"
-          ></textarea>
-          <button type="button" class="primary" id="btn-send">Gửi</button>
-        </div>
-      </main>
+      <div class="workspace">
+        <header class="topbar">
+          <div class="topbar-context">
+            <span>Làm việc</span>
+            <strong>Inbox · Sale takeover</strong>
+          </div>
+          <div class="topbar-spacer"></div>
+          <div class="topbar-meta">Idle auto-resume: <span id="idle-label">…</span></div>
+          <div class="topbar-actions">
+            <button type="button" class="btn btn-ghost" id="btn-refresh">Làm mới</button>
+          </div>
+        </header>
 
-      <aside class="col">
-        <h2>Event log</h2>
-        <div class="events" id="events"></div>
-      </aside>
+        <div class="chat-grid">
+          <!-- Conversation list -->
+          <section class="inbox">
+            <div class="inbox-tools">
+              <div class="search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.55"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="search" type="search" placeholder="Tìm tên, nội dung…" autocomplete="off" />
+              </div>
+              <div class="bot-tabs" id="bot-tabs">
+                <button type="button" class="chip active" data-bot="all">Tất cả nick</button>
+                <button type="button" class="chip" data-bot="main">Gia Huy</button>
+                <button type="button" class="chip" data-bot="worker">Minh Phát</button>
+              </div>
+            </div>
+            <div class="thread-list" id="thread-list"></div>
+          </section>
+
+          <!-- Messages -->
+          <section class="thread-pane" id="thread-pane">
+            <div class="thread-empty" id="thread-empty">
+              <div class="illus">💬</div>
+              <h3>Chọn hội thoại</h3>
+              <p>Theo dõi AI, tiếp quản chat bằng nick bot, pin human hoặc trả lại AI sau idle.</p>
+            </div>
+            <div id="thread-active" style="display:none;flex:1;min-height:0;flex-direction:column">
+              <div class="chat-head">
+                <div>
+                  <h3 id="chat-title">—</h3>
+                  <div class="sub" id="chat-sub">—</div>
+                </div>
+                <div class="toolbar">
+                  <button type="button" class="btn btn-warn" id="btn-takeover">Tiếp quản</button>
+                  <button type="button" class="btn btn-danger" id="btn-pin">Pin human</button>
+                  <button type="button" class="btn btn-ok" id="btn-resume">Trả lại AI</button>
+                  <button type="button" class="btn" id="btn-sim">Giả lập khách</button>
+                </div>
+              </div>
+              <div id="status-bar" class="status-bar ai"></div>
+              <div class="messages" id="messages"></div>
+              <div class="composer">
+                <div class="composer-box">
+                  <textarea id="msg-input" rows="2" placeholder="Sale nhắn bằng nick bot…"></textarea>
+                  <div class="composer-hint">Enter gửi · Shift+Enter xuống dòng · Gửi khi AI active = tự pause</div>
+                </div>
+                <button type="button" class="btn-send" id="btn-send">Gửi</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Activity -->
+          <aside class="rail">
+            <div class="rail-head">
+              <h2>Hoạt động</h2>
+              <p>Takeover, pin, auto-resume, tin sale.</p>
+            </div>
+            <div class="events" id="events"></div>
+          </aside>
+        </div>
+      </div>
     </div>
-
     <script src="/app.js"></script>
   </body>
 </html>

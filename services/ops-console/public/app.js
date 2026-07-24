@@ -9,7 +9,22 @@ const api = (path, opts = {}) =>
   });
 
 const $ = (s) => document.querySelector(s);
-let state = { threads: [], selected: null, detail: null, config: null };
+const state = {
+  threads: [],
+  selected: null,
+  detail: null,
+  config: null,
+  botFilter: "all",
+  search: "",
+};
+
+function escapeHtml(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 function modeBadge(mode) {
   if (mode === "human_pinned") return `<span class="badge pinned">Human pin</span>`;
@@ -23,34 +38,56 @@ function fmtTime(iso) {
     return new Date(iso).toLocaleTimeString("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
     });
   } catch {
-    return iso;
+    return "";
   }
+}
+
+function filteredThreads() {
+  const q = state.search.trim().toLowerCase();
+  return state.threads.filter((t) => {
+    if (state.botFilter !== "all" && t.bot !== state.botFilter) return false;
+    if (!q) return true;
+    return (
+      (t.peer_name || "").toLowerCase().includes(q) ||
+      (t.last_preview || "").toLowerCase().includes(q) ||
+      (t.bot_label || "").toLowerCase().includes(q)
+    );
+  });
 }
 
 function renderList() {
   const el = $("#thread-list");
-  if (!state.threads.length) {
-    el.innerHTML = `<div class="empty">Chưa có hội thoại</div>`;
+  const list = filteredThreads();
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-list">Không có hội thoại phù hợp</div>`;
     return;
   }
-  el.innerHTML = state.threads
+  el.innerHTML = list
     .map((t) => {
       const active = state.selected === t.id ? "active" : "";
       const timer =
         t.ai_mode === "human_paused" && t.resume_in_sec != null
-          ? `AI lại sau ${t.resume_in_sec}s`
+          ? `AI ${t.resume_in_sec}s`
           : t.ai_mode === "human_pinned"
-            ? "Pin — không auto"
-            : "AI đang trực";
-      return `<div class="thread ${active}" data-id="${t.id}">
-        <div class="name">${escapeHtml(t.peer_name)}</div>
-        <div class="bot">${escapeHtml(t.bot_label)} · ${escapeHtml(t.bot)}</div>
-        <div class="preview">${escapeHtml(t.last_preview || "")}</div>
-        <div class="row">${modeBadge(t.ai_mode)}<span style="font-size:10px;color:var(--muted)">${timer}</span></div>
-      </div>`;
+            ? "Pinned"
+            : "";
+      return `<button type="button" class="thread ${active}" data-id="${t.id}">
+        <div class="thread-top">
+          <div class="thread-name">${escapeHtml(t.peer_name)}</div>
+          <div class="thread-time">${fmtTime(t.last_activity_at)}</div>
+        </div>
+        <div class="thread-bot">
+          <span class="dot ${t.bot === "worker" ? "worker" : ""}"></span>
+          ${escapeHtml(t.bot_label)}
+        </div>
+        <div class="thread-preview">${escapeHtml(t.last_preview || "")}</div>
+        <div class="thread-foot">
+          ${modeBadge(t.ai_mode)}
+          <span style="font-size:10.5px;color:var(--mc-muted)">${timer}</span>
+        </div>
+      </button>`;
     })
     .join("");
   el.querySelectorAll(".thread").forEach((n) => {
@@ -59,47 +96,42 @@ function renderList() {
 }
 
 function renderChat() {
+  const empty = $("#thread-empty");
+  const active = $("#thread-active");
   const d = state.detail;
-  const head = $("#chat-head");
-  const msgs = $("#messages");
-  const banner = $("#banner");
-  const composer = $("#composer");
   if (!d) {
-    head.innerHTML = `<div class="empty">Chọn hội thoại bên trái</div>`;
-    msgs.innerHTML = "";
-    banner.innerHTML = "";
-    composer.style.display = "none";
+    empty.style.display = "grid";
+    active.style.display = "none";
     return;
   }
-  const t = d.thread;
-  head.innerHTML = `
-    <div>
-      <h3>${escapeHtml(t.peer_name)}</h3>
-      <div class="sub">${escapeHtml(t.bot_label)} · thread ${escapeHtml(t.thread_id)}</div>
-    </div>
-    <div class="toolbar">
-      <button class="warn" id="btn-takeover" ${t.ai_mode !== "ai_active" ? "disabled" : ""}>Tiếp quản</button>
-      <button class="danger" id="btn-pin">Pin human</button>
-      <button class="ok" id="btn-resume" ${t.ai_mode === "ai_active" ? "disabled" : ""}>Trả lại AI</button>
-      <button class="ghost" id="btn-sim">Giả lập khách nhắn</button>
-    </div>`;
+  empty.style.display = "none";
+  active.style.display = "flex";
 
+  const t = d.thread;
+  $("#chat-title").textContent = t.peer_name;
+  $("#chat-sub").textContent = `${t.bot_label} · ${t.thread_id}`;
+
+  const bar = $("#status-bar");
   if (t.ai_mode === "human_pinned") {
-    banner.className = "banner pinned";
-    banner.textContent =
-      "Human PIN — AI tắt hẳn đến khi sale bấm «Trả lại AI». Không auto-resume.";
+    bar.className = "status-bar pinned";
+    bar.textContent =
+      "Human PIN — AI tắt đến khi sale bấm «Trả lại AI». Không tự bật lại.";
   } else if (t.ai_mode === "human_paused") {
-    banner.className = "banner paused";
-    banner.textContent = `Sale đang xử lý — AI tạm tắt. Tự bật lại sau ~${t.resume_in_sec ?? "?"}s không có tin (demo idle ${state.config?.idle_label || ""}).`;
+    bar.className = "status-bar paused";
+    bar.textContent = `Sale đang xử lý — AI tạm tắt. Tự bật lại sau ~${t.resume_in_sec ?? "?"}s không có tin mới (${state.config?.idle_label || "idle"}).`;
   } else {
-    banner.className = "banner ai";
-    banner.textContent = "AI-first đang active. Gửi tin sale sẽ tự pause AI.";
+    bar.className = "status-bar ai";
+    bar.textContent = "AI-first đang active. Gửi tin sale sẽ tự pause AI trên thread này.";
   }
 
+  $("#btn-takeover").disabled = t.ai_mode !== "ai_active";
+  $("#btn-resume").disabled = t.ai_mode === "ai_active";
+
+  const msgs = $("#messages");
   msgs.innerHTML = d.messages
     .map((m) => {
       const who =
-        m.role === "customer" ? "Khách" : m.role === "sale" ? "Sale (bot nick)" : "AI";
+        m.role === "customer" ? "Khách" : m.role === "sale" ? "Sale · nick bot" : "AI bot";
       return `<div class="bubble ${m.role}">
         <div class="who">${who}</div>
         <div>${escapeHtml(m.text)}</div>
@@ -108,50 +140,23 @@ function renderChat() {
     })
     .join("");
   msgs.scrollTop = msgs.scrollHeight;
-  composer.style.display = "flex";
-
-  $("#btn-takeover").onclick = async () => {
-    await api(`/v1/threads/${t.id}/takeover`, {
-      method: "POST",
-      body: JSON.stringify({ actor: "sale-demo" }),
-    });
-    await refreshDetail();
-    await refreshList();
-  };
-  $("#btn-pin").onclick = async () => {
-    await api(`/v1/threads/${t.id}/pin`, {
-      method: "POST",
-      body: JSON.stringify({ actor: "sale-demo" }),
-    });
-    await refreshDetail();
-    await refreshList();
-  };
-  $("#btn-resume").onclick = async () => {
-    await api(`/v1/threads/${t.id}/resume`, {
-      method: "POST",
-      body: JSON.stringify({ actor: "sale-demo" }),
-    });
-    await refreshDetail();
-    await refreshList();
-  };
-  $("#btn-sim").onclick = async () => {
-    const text = prompt("Tin khách (demo):", "Cho chị hỏi thêm về liệu trình ạ");
-    if (text == null) return;
-    await api(`/v1/threads/${t.id}/sim-customer`, {
-      method: "POST",
-      body: JSON.stringify({ text }),
-    });
-    await refreshDetail();
-    await refreshList();
-  };
 }
 
-function escapeHtml(s) {
-  return String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function renderEvents(events) {
+  const el = $("#events");
+  if (!events?.length) {
+    el.innerHTML = `<div class="empty-list">Chưa có sự kiện</div>`;
+    return;
+  }
+  el.innerHTML = events
+    .slice(0, 50)
+    .map(
+      (e) => `<div class="event">
+        <div class="event-type">${escapeHtml(e.type)}</div>
+        <div class="event-meta">${escapeHtml(e.actor)} · ${fmtTime(e.at)}</div>
+      </div>`,
+    )
+    .join("");
 }
 
 async function selectThread(id) {
@@ -164,7 +169,7 @@ async function refreshList() {
   const data = await api("/v1/threads");
   state.threads = data.threads;
   state.config = data.config;
-  $("#idle-label").textContent = data.config?.idle_label || "";
+  $("#idle-label").textContent = data.config?.idle_label || "—";
   renderList();
 }
 
@@ -180,16 +185,7 @@ async function refreshDetail() {
 
 async function refreshEvents() {
   const data = await api("/v1/events");
-  const el = $("#events");
-  el.innerHTML = data.events
-    .slice(0, 40)
-    .map(
-      (e) => `<div class="event">
-        <div><strong>${escapeHtml(e.type)}</strong> · ${escapeHtml(e.actor)}</div>
-        <div class="t">${fmtTime(e.at)}</div>
-      </div>`,
-    )
-    .join("") || `<div class="empty">Chưa có event</div>`;
+  renderEvents(data.events);
 }
 
 async function sendSale() {
@@ -200,25 +196,67 @@ async function sendSale() {
     body: JSON.stringify({ text, actor: "sale-demo" }),
   });
   $("#msg-input").value = "";
-  await refreshDetail();
-  await refreshList();
-  await refreshEvents();
+  await Promise.all([refreshDetail(), refreshList(), refreshEvents()]);
 }
 
-$("#btn-send").onclick = () => sendSale().catch(alert);
-$("#msg-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendSale().catch(alert);
-  }
-});
-$("#btn-reset").onclick = async () => {
-  if (!confirm("Reset demo data?")) return;
-  await api("/v1/demo/reset", { method: "POST", body: "{}" });
-  state.selected = null;
-  await boot();
-};
-$("#btn-refresh").onclick = () => boot().catch(alert);
+function bind() {
+  $("#btn-send").onclick = () => sendSale().catch(alert);
+  $("#msg-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendSale().catch(alert);
+    }
+  });
+  $("#btn-takeover").onclick = async () => {
+    await api(`/v1/threads/${state.selected}/takeover`, {
+      method: "POST",
+      body: JSON.stringify({ actor: "sale-demo" }),
+    });
+    await Promise.all([refreshDetail(), refreshList(), refreshEvents()]);
+  };
+  $("#btn-pin").onclick = async () => {
+    await api(`/v1/threads/${state.selected}/pin`, {
+      method: "POST",
+      body: JSON.stringify({ actor: "sale-demo" }),
+    });
+    await Promise.all([refreshDetail(), refreshList(), refreshEvents()]);
+  };
+  $("#btn-resume").onclick = async () => {
+    await api(`/v1/threads/${state.selected}/resume`, {
+      method: "POST",
+      body: JSON.stringify({ actor: "sale-demo" }),
+    });
+    await Promise.all([refreshDetail(), refreshList(), refreshEvents()]);
+  };
+  $("#btn-sim").onclick = async () => {
+    const text = prompt("Tin khách (demo):", "Cho chị hỏi thêm về liệu trình ạ");
+    if (text == null) return;
+    await api(`/v1/threads/${state.selected}/sim-customer`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+    await Promise.all([refreshDetail(), refreshList(), refreshEvents()]);
+  };
+  $("#btn-reset").onclick = async () => {
+    if (!confirm("Reset dữ liệu demo?")) return;
+    await api("/v1/demo/reset", { method: "POST", body: "{}" });
+    state.selected = null;
+    await boot();
+  };
+  $("#btn-refresh").onclick = () => boot().catch(alert);
+  $("#search").oninput = (e) => {
+    state.search = e.target.value;
+    renderList();
+  };
+  document.querySelectorAll("#bot-tabs .chip").forEach((chip) => {
+    chip.onclick = () => {
+      document.querySelectorAll("#bot-tabs .chip").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      state.botFilter = chip.dataset.bot;
+      renderList();
+    };
+  });
+}
 
 async function boot() {
   await refreshList();
@@ -226,11 +264,11 @@ async function boot() {
   await refreshEvents();
 }
 
+bind();
 boot().catch((e) => {
-  $("#thread-list").innerHTML = `<div class="empty">Lỗi: ${escapeHtml(e.message)}</div>`;
+  $("#thread-list").innerHTML = `<div class="empty-list">Lỗi: ${escapeHtml(e.message)}</div>`;
 });
 
-// poll for auto-resume countdown
 setInterval(() => {
   refreshList().catch(() => {});
   if (state.selected) refreshDetail().catch(() => {});
