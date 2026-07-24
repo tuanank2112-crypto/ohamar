@@ -65,12 +65,21 @@ ai_active ──takeover/send──► human_paused ──idle/resume──► a
                 └──pin──► human_pinned ──resume only──► ai_active
 ```
 
-## Chưa có (bổ sung sau)
+## Frontend đã xong (demo)
+
+- Monarch tokens + shell + inbox 3 cột
+- Fix conflict CSS grid vs monarch fixed
+- Race/poll/scroll/API hardening
+- API online badge, stats, toast, avatar, char count
+- Mobile master-detail
+- Build: `npm run ops-console:web:build` → serve từ `:18793` nếu có `web/dist`
+
+## Chưa map Ohamar (phase sau)
 
 - Gửi Zalo thật qua zaloclaw
 - Gateway skip AI khi `ai-allowed=false`
-- Full views CRM (contacts, analytics, RBAC…)
+- Thread/tin thật từ bot
 - Auth sale / multi-user
-- Socket realtime như ZaloCRM
+- Socket realtime
 
 Data: `services/ops-console/data/ops-store.json` (gitignore).

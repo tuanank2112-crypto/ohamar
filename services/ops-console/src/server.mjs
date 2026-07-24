@@ -32,6 +32,11 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(__dirname, "..", "public");
+const WEB_DIST = path.join(__dirname, "..", "web", "dist");
+/** Prefer Vue build (npm run ops-console:web:build) over prototype public/ */
+const STATIC_ROOT = fs.existsSync(path.join(WEB_DIST, "index.html"))
+  ? WEB_DIST
+  : PUBLIC;
 const HOST = process.env.OPS_HOST || "127.0.0.1";
 const PORT = Number(process.env.OPS_PORT || 18793);
 const TOKEN = (process.env.OPS_TOKEN || "").trim();
@@ -180,15 +185,19 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // --- static ---
+    // --- static (Vue dist if built, else public prototype) ---
     if (method === "GET") {
       if (p === "/" || p === "/index.html") {
-        return serveStatic(res, path.join(PUBLIC, "index.html"));
+        return serveStatic(res, path.join(STATIC_ROOT, "index.html"));
       }
       const safe = path.normalize(p).replace(/^(\.\.(\/|\\|$))+/, "");
-      const file = path.join(PUBLIC, safe);
-      if (file.startsWith(PUBLIC)) {
+      const file = path.join(STATIC_ROOT, safe);
+      if (file.startsWith(STATIC_ROOT) && fs.existsSync(file) && fs.statSync(file).isFile()) {
         return serveStatic(res, file);
+      }
+      // SPA fallback for Vue router-less assets under dist/assets
+      if (STATIC_ROOT === WEB_DIST && !p.startsWith("/v1")) {
+        return serveStatic(res, path.join(WEB_DIST, "index.html"));
       }
     }
 
@@ -211,7 +220,8 @@ setInterval(() => {
 
 server.listen(PORT, HOST, () => {
   console.log(`🎛  Ohamar Ops Console  http://${HOST}:${PORT}`);
+  console.log(`   static: ${STATIC_ROOT === WEB_DIST ? "web/dist (Vue build)" : "public (prototype)"}`);
   console.log(`   idle auto-resume: ${getConfig().idle_label}`);
   console.log(`   auth: ${TOKEN ? "Bearer OPS_TOKEN" : "open (local demo)"}`);
-  console.log(`   demo: open UI → Tiếp quản / Gửi / đợi auto AI`);
+  console.log(`   dev UI: npm run ops-console:web → http://127.0.0.1:5174`);
 });
