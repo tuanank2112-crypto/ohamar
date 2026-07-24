@@ -43,7 +43,13 @@ $stderr = Join-Path $logDir "stderr-$Instance.log"
 function Write-Log {
   param([string]$Message)
   $line = "[{0}] {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Message
-  Add-Content -Path $log -Value $line -Encoding UTF8
+  try {
+    Add-Content -Path $log -Value $line -Encoding UTF8
+  } catch {
+    # ignore log disk errors
+  }
+  # Always show on console so RDP test is not "silent"
+  Write-Host $line
 }
 
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
