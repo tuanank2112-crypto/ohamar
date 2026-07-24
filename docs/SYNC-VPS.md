@@ -20,13 +20,13 @@ Repo private GitHub (ví dụ):
 
 ```bash
 cd ~/ohamar
-# nếu chưa có remote:
-gh repo create ohamar --private --source=. --remote=origin
-# hoặc remote có sẵn:
+# remote đã gắn (private):
+#   https://github.com/tuanank2112-crypto/ohamar
 git remote -v
 
 git checkout sync/vps
-git push -u origin sync/vps
+# ... sửa ...
+git push origin sync/vps
 ```
 
 ---
