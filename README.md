@@ -2,6 +2,16 @@
 
 **Personal AI assistant chạy local** — kết hợp [OpenClaw](https://github.com/openclaw/openclaw) (gateway đa kênh) + [ZaloClaw](https://github.com/monas-team/zaloclaw) (plugin Zalo tài khoản cá nhân).
 
+### UI (hướng B + 2+1)
+
+| Path | Vai trò |
+|------|---------|
+| `services/ops-console/` | **(1)** Ops API + web map Ohamar (inbox/takeover, chạy được) |
+| `apps/crm-ui/` | **(2)** Full frontend ZaloCRM/Monarch — **reference** (AGPL), chưa wire Ohamar |
+| Zalo channel | **Chỉ** gateway + zaloclaw — không bật zca-js pool của CRM |
+
+Chi tiết: [`docs/UI-STRATEGY-B.md`](docs/UI-STRATEGY-B.md) · [`apps/crm-ui/OHAMAR.md`](apps/crm-ui/OHAMAR.md)
+
 Ohamar **không fork** toàn bộ OpenClaw (65k+ commits). Thay vào đó:
 
 | Thành phần | Vai trò |

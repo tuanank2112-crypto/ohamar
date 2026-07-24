@@ -1,0 +1,13 @@
+{
+  "name": "Monarch CRM",
+  "short_name": "Monarch",
+  "description": "Không gian vận hành quan hệ khách hàng đa kênh",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F8FC",
+  "theme_color": "#0F172A",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/brand/monarch-logo.png", "sizes": "924x373", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -24,6 +24,8 @@ services/lead-core/*.db-*
 services/ops-console/data/
 services/ops-console/web/node_modules/
 services/ops-console/web/dist/
+apps/crm-ui/node_modules/
+apps/crm-ui/dist/
 # fb local
 services/fb-messenger/.env
 vendor/

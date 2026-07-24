@@ -64,7 +64,9 @@
     "ops-console": "OPS_IDLE_SEC=60 node services/ops-console/src/server.mjs",
     "ops-console:prod-idle": "OPS_IDLE_SEC=480 node services/ops-console/src/server.mjs",
     "ops-console:web": "npm --prefix services/ops-console/web run dev",
-    "ops-console:web:build": "npm --prefix services/ops-console/web run build"
+    "ops-console:web:build": "npm --prefix services/ops-console/web run build",
+    "crm-ui:dev": "npm --prefix apps/crm-ui run dev",
+    "crm-ui:build": "npm --prefix apps/crm-ui run build"
   },
   "dependencies": {
     "openclaw": "^2026.7.1"
