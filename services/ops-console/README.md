@@ -4,24 +4,38 @@
 
 ## Chạy demo (máy dev)
 
-```bash
-cd ~/ohamar/services/ops-console
-# idle 60s cho demo nhanh (prod: 300–600)
-OPS_IDLE_SEC=60 node src/server.mjs
-```
-
-Mở: **http://127.0.0.1:18793**
-
-Hoặc từ root:
+### 1) Backend API
 
 ```bash
+cd ~/ohamar
 npm run ops-console
+# → http://127.0.0.1:18793  (API + prototype HTML cũ)
 ```
+
+### 2) Frontend Vue (Monarch-style — dùng cái này)
+
+```bash
+cd ~/ohamar/services/ops-console/web
+npm install   # lần đầu
+npm run dev
+# → http://127.0.0.1:5174
+```
+
+Hoặc: `npm run ops-console:web` từ root.
+
+Vite proxy `/v1` → API `:18793`.
+
+**Mở: http://127.0.0.1:5174/**
+
+UI: token Monarch (`monarch.css` từ source CRM) + shell inbox 3 cột.  
+Backend: ops-console (chưa full ZaloCRM API). Thiếu feature CRM → bổ sung sau.
+
+`web/NOTICE` — ghi nhận nguồn design Monarch / AGPL.
 
 ## Luồng thử trên UI
 
 1. Chọn thread (Gia Huy / Minh Phát demo).
-2. **Giả lập khách nhắn** → AI demo trả lời (`ai_active`).
+2. **Giả lập khách** → AI demo trả lời (`ai_active`).
 3. **Tiếp quản** → AI pause; countdown auto-resume.
 4. Gõ tin sale **Gửi** → tin `sale` (nick bot, demo local).
 5. Đợi ~60s không nhắn → **AI active** lại (event `auto_resume`).
@@ -51,11 +65,12 @@ ai_active ──takeover/send──► human_paused ──idle/resume──► a
                 └──pin──► human_pinned ──resume only──► ai_active
 ```
 
-## Chưa có (phase sau)
+## Chưa có (bổ sung sau)
 
 - Gửi Zalo thật qua zaloclaw
 - Gateway skip AI khi `ai-allowed=false`
+- Full views CRM (contacts, analytics, RBAC…)
 - Auth sale / multi-user
-- Lead-core sync
+- Socket realtime như ZaloCRM
 
-Data file: `services/ops-console/data/ops-store.json` (gitignore local).
+Data: `services/ops-console/data/ops-store.json` (gitignore).

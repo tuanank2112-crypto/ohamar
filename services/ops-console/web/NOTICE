@@ -1,0 +1,9 @@
+Parts of the visual design system (monarch.css tokens / Monarch CRM look)
+are derived from ZaloCRM / Monarch UI by Nguyen Tien Loc.
+
+ZaloCRM is licensed under AGPL-3.0. If this frontend is expanded with more
+copied ZaloCRM source and offered as a network service, ensure AGPL §13
+compliance (source access for users of the modified version).
+
+Ohamar ops-console API and Vue screens wired to /v1/* are original for
+Vicamed/Ohamar product exploration.

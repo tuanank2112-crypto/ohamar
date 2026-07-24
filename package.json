@@ -62,7 +62,9 @@
     "fb:start": "node services/fb-messenger/src/server.mjs",
     "fb:health": "node services/fb-messenger/src/health-cli.mjs",
     "ops-console": "OPS_IDLE_SEC=60 node services/ops-console/src/server.mjs",
-    "ops-console:prod-idle": "OPS_IDLE_SEC=480 node services/ops-console/src/server.mjs"
+    "ops-console:prod-idle": "OPS_IDLE_SEC=480 node services/ops-console/src/server.mjs",
+    "ops-console:web": "npm --prefix services/ops-console/web run dev",
+    "ops-console:web:build": "npm --prefix services/ops-console/web run build"
   },
   "dependencies": {
     "openclaw": "^2026.7.1"

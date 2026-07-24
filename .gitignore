@@ -22,6 +22,8 @@ services/lead-core/*.db
 services/lead-core/*.db-*
 # ops-console demo store
 services/ops-console/data/
+services/ops-console/web/node_modules/
+services/ops-console/web/dist/
 # fb local
 services/fb-messenger/.env
 vendor/
