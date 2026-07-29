@@ -1,0 +1,301 @@
+/* Dashboard layout built on the global Monarch dark design tokens. */
+.airtable-scope.dh-v4 {
+  --at-bg: var(--mc-canvas);
+  --at-canvas: var(--mc-surface);
+  --at-surface-soft: var(--mc-surface-alt);
+  --at-surface-strong: var(--mc-surface-strong);
+  --at-bar-track: var(--mc-surface-alt);
+  --at-hairline: var(--mc-line);
+  --at-border-strong: rgba(255,255,255,.16);
+  --at-ink: var(--mc-ink);
+  --at-body: var(--mc-text);
+  --at-muted: #8d8cb0;
+  --at-hint: var(--mc-muted);
+  --at-action: var(--mc-primary);
+  --at-action-active: #8b98f0;
+  --at-action-soft: rgba(108,125,232,.16);
+  --at-primary: var(--mc-primary);
+  --at-primary-active: var(--mc-primary-strong);
+  --at-on-primary: #fff;
+  --at-atlas-success: var(--mc-success);
+  --at-atlas-success-soft: rgba(52,211,153,.15);
+  --at-atlas-warning: var(--mc-warning);
+  --at-atlas-warning-soft: rgba(251,191,36,.15);
+  --at-atlas-danger: var(--mc-danger);
+  --at-atlas-danger-soft: rgba(248,113,113,.15);
+  --at-atlas-purple: #a78bfa;
+  --at-atlas-purple-soft: rgba(167,139,250,.16);
+  --at-r-md: 12px;
+  --at-r-sm: 8px;
+  --lead-c: #fbbf24;
+  --eng-c: #8b98f0;
+  --prio-c: #f87171;
+  width: 100%;
+  max-width: none;
+  height: calc(100vh - var(--mc-topbar-h));
+  padding: 0 14px 28px;
+  color: var(--at-body);
+  background: radial-gradient(circle at 44% -18%,rgba(91,106,212,.13),transparent 34rem),var(--at-bg);
+}
+
+.airtable-scope.dh-v4 .at-roletabs {
+  height: 50px;
+  margin: 0 -14px 14px;
+  padding: 0 20px;
+  border: 0;
+  border-bottom: 1px solid var(--at-hairline);
+  border-radius: 0;
+  background: rgba(14,13,28,.92);
+  box-shadow: none;
+  backdrop-filter: blur(16px);
+}
+.airtable-scope.dh-v4 .at-roletab {
+  min-height: 34px;
+  margin: 7px 2px;
+  padding: 6px 14px;
+  color: var(--at-muted);
+  border: 0;
+  border-radius: var(--at-r-sm);
+}
+.airtable-scope.dh-v4 .at-roletab:hover { color: var(--at-ink); }
+.airtable-scope.dh-v4 .at-roletab.is-active { color: #c5caff; background: var(--at-action-soft); }
+.airtable-scope.dh-v4 .at-roletabs__scope { color: #c5caff; background: var(--at-action-soft); }
+.airtable-scope.dh-v4 .at-dash-body { padding: 0; }
+
+.airtable-scope.dh-v4 .dh-workspace {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 310px;
+  gap: 14px;
+  align-items: start;
+}
+.airtable-scope.dh-v4 .dh-main,
+.airtable-scope.dh-v4 .dh-rail {
+  padding: 16px;
+  border: 1px solid var(--at-hairline);
+  border-radius: 14px;
+  background: rgba(24,23,41,.78);
+  box-shadow: 0 18px 50px rgba(2,2,12,.22),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.airtable-scope.dh-v4 .dh-main { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
+.airtable-scope.dh-v4 .dh-rail {
+  position: sticky;
+  top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.airtable-scope.dh-v4 .dh-rail__crumb { display: flex; align-items: center; gap: 6px; color: var(--at-hint); font-size: 12px; }
+.airtable-scope.dh-v4 .dh-rail__crumb b { color: var(--at-ink); font-weight: 600; }
+.airtable-scope.dh-v4 .dh-rail__crumb-sep { opacity: .5; }
+.airtable-scope.dh-v4 .dh-rail__crumb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--at-action); }
+
+.airtable-scope.dh-v4 .at-greet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(560px, 58%);
+  align-items: center;
+  gap: 18px;
+  margin: 0;
+  padding: 18px 22px;
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-r-md);
+  background: linear-gradient(135deg,rgba(91,106,212,.15),rgba(139,92,246,.055));
+}
+.airtable-scope.dh-v4 .at-greet__h { color: #f0f0fb; }
+.airtable-scope.dh-v4 .at-greet__s {
+  max-width: 760px;
+  line-height: 1.45;
+}
+.airtable-scope.dh-v4 .at-greet__r {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  justify-self: end;
+  width: 100%;
+  min-width: 0;
+}
+.airtable-scope.dh-v4 .at-greet__r:has(.dh-scope) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.airtable-scope.dh-v4 .at-greet__r:not(:has(.dh-scope)) {
+  width: min(480px, 100%);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.airtable-scope.dh-v4 .at-greet__r > .dh-scope,
+.airtable-scope.dh-v4 .at-greet__r > .at-btn {
+  min-width: 0;
+  width: 100%;
+}
+.airtable-scope.dh-v4 .at-greet__r .at-roletabs__scope,
+.airtable-scope.dh-v4 .at-greet__r .at-btn {
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.airtable-scope.dh-v4 .at-greet__r .at-roletabs__scope {
+  border: 1px solid transparent;
+}
+.airtable-scope.dh-v4 .at-greet__r .at-roletabs__scope .scope-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.airtable-scope.dh-v4 .at-greet__r .at-roletabs__scope svg,
+.airtable-scope.dh-v4 .at-greet__r .at-btn svg {
+  flex: 0 0 auto;
+}
+.airtable-scope.dh-v4 .dh-main > .at-kpi-grid { margin: 0; }
+.airtable-scope.dh-v4 .at-kpi-tile,
+.airtable-scope.dh-v4 .at-card {
+  border-color: var(--at-hairline);
+  background: var(--at-canvas);
+  box-shadow: var(--mc-shadow-sm);
+}
+.airtable-scope.dh-v4 .at-kpi-tile { transition: transform 160ms ease,border-color 160ms ease,box-shadow 160ms ease; }
+.airtable-scope.dh-v4 .at-kpi-tile.at-kpi--clickable:hover {
+  transform: translateY(-1px);
+  border-color: var(--at-action);
+  box-shadow: 0 10px 28px rgba(0,0,0,.5),0 0 0 1px rgba(108,125,232,.3);
+}
+.airtable-scope.dh-v4 .at-kpi-grid > .at-kpi-tile:first-child {
+  border-color: transparent;
+  background: linear-gradient(135deg,var(--mc-primary),var(--mc-primary-strong));
+}
+.airtable-scope.dh-v4 .at-kpi-grid > .at-kpi-tile:first-child :is(.at-kpi-label,.at-kpi-sub) { color: rgba(255,255,255,.72); }
+.airtable-scope.dh-v4 .at-kpi-grid > .at-kpi-tile:first-child .at-kpi-value { color: #fff; }
+.airtable-scope.dh-v4 .at-kpi-priv { color: #fcd34d; }
+.airtable-scope.dh-v4 .at-card__head { min-height: 42px; }
+.airtable-scope.dh-v4 .at-btn--secondary { color: var(--at-ink); border-color: var(--at-hairline); background: var(--at-canvas); }
+.airtable-scope.dh-v4 .at-btn--primary {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg,var(--mc-primary),var(--mc-primary-strong));
+  box-shadow: 0 7px 18px rgba(91,106,212,.24);
+}
+.airtable-scope.dh-v4 .at-table thead th { color: var(--at-hint); background: var(--at-surface-soft); }
+.airtable-scope.dh-v4 .at-table tbody tr:hover { background: var(--at-surface-soft); }
+.airtable-scope.dh-v4 .at-bar__seg--priv {
+  width: 100%;
+  background: repeating-linear-gradient(45deg,rgba(148,163,184,.24),rgba(148,163,184,.24) 4px,rgba(148,163,184,.1) 4px,rgba(148,163,184,.1) 8px);
+}
+
+.airtable-scope.dh-v4 .dh-section-layout {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--mc-grid-gap);
+  padding: var(--mc-panel-padding);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--mc-radius-lg);
+  background: rgba(24,23,41,.78);
+  box-shadow: 0 18px 50px rgba(2,2,12,.22),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.airtable-scope.dh-v4 .dh-section-layout > :is(.at-kpi-grid,.at-dash-grid-2,.at-dash-grid-3,.at-card,.at-banner-priv,.at-banner-audit) {
+  margin: 0 !important;
+}
+.airtable-scope.dh-v4 .dh-section-layout :is(.at-dash-grid-2,.at-dash-grid-3,.at-dash-col) {
+  gap: var(--mc-grid-gap);
+}
+.airtable-scope.dh-v4 .dh-section-layout > .at-card { overflow-x: auto; }
+
+.airtable-scope.dh-v4 .dh-tasks,
+.airtable-scope.dh-v4 .dh-note {
+  min-width: 0;
+  overflow: hidden;
+  padding: 12px;
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-r-md);
+  background: var(--at-canvas);
+}
+.airtable-scope.dh-v4 .dh-tasks__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.airtable-scope.dh-v4 .dh-tasks__count { color: var(--at-hint); font: 11px var(--mono,monospace); }
+.airtable-scope.dh-v4 .dh-task { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: var(--at-r-sm); }
+.airtable-scope.dh-v4 .dh-task:hover { background: var(--at-surface-soft); }
+.airtable-scope.dh-v4 .dh-task__check { width: 16px; height: 16px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: #fff; border: 1.5px solid var(--at-border-strong); border-radius: 50%; background: transparent; }
+.airtable-scope.dh-v4 .dh-task__check.on { border-color: var(--at-primary); background: var(--at-primary); }
+.airtable-scope.dh-v4 .dh-task__label { flex: 1; color: var(--at-ink); font-size: 12.5px; }
+.airtable-scope.dh-v4 .dh-task.is-done .dh-task__label { color: var(--at-hint); text-decoration: line-through; }
+.airtable-scope.dh-v4 .dh-task__del { padding: 2px; color: var(--at-hint); border: 0; background: transparent; opacity: 0; }
+.airtable-scope.dh-v4 .dh-task:hover .dh-task__del { opacity: 1; }
+.airtable-scope.dh-v4 .dh-task--input {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  margin-top: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-r-sm);
+  background: var(--at-surface-soft);
+}
+.airtable-scope.dh-v4 .dh-task--input:focus-within {
+  border-color: rgba(108,125,232,.5);
+  box-shadow: 0 0 0 3px rgba(108,125,232,.12);
+}
+.airtable-scope.dh-v4 .dh-task--input input {
+  min-width: 0;
+  width: 100%;
+  color: var(--at-ink);
+  border: 0 !important;
+  outline: 0;
+  background: transparent !important;
+}
+.airtable-scope.dh-v4 .dh-task--input input::placeholder { color: var(--at-hint); }
+.airtable-scope.dh-v4 .dh-task__circle {
+  width: 18px;
+  height: 18px;
+  color: var(--at-hint);
+}
+.airtable-scope.dh-v4 .dh-task__tools {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--at-hint);
+  flex: 0 0 auto;
+}
+.airtable-scope.dh-v4 .dh-task__tools svg { flex: 0 0 auto; }
+.airtable-scope.dh-v4 .dh-note textarea { width: 100%; margin-top: 8px; padding: 8px 10px; color: var(--at-ink); border: 1px solid var(--at-hairline); border-radius: var(--at-r-sm); background: var(--at-surface-soft); resize: vertical; outline: 0; }
+
+.airtable-scope.dh-v4 .at-empty--illustrated { min-height: 128px; padding: 22px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.airtable-scope.dh-v4 .at-empty--compact { min-height: 106px; }
+.airtable-scope.dh-v4 .at-empty__icon { width: 38px; height: 38px; margin-bottom: 9px; display: inline-flex; align-items: center; justify-content: center; color: var(--at-action); border: 1px solid var(--at-hairline); border-radius: 11px; background: var(--at-action-soft); }
+.airtable-scope.dh-v4 .at-empty__copy { margin-top: 4px; color: var(--at-hint); font-size: 11px; }
+
+@media (max-width:1360px) {
+  .airtable-scope.dh-v4 .dh-workspace { grid-template-columns: 1fr; }
+  .airtable-scope.dh-v4 .dh-rail { position: static; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; }
+  .airtable-scope.dh-v4 .dh-rail__crumb { grid-column: 1 / -1; }
+}
+@media (max-width:760px) {
+  .airtable-scope.dh-v4 { padding: 0 10px 20px; }
+  .airtable-scope.dh-v4 .at-roletabs { margin-inline: -10px; padding-inline: 8px; overflow-x: auto; }
+  .airtable-scope.dh-v4 .at-roletab { padding-inline: 10px; white-space: nowrap; }
+  .airtable-scope.dh-v4 .dh-main,.airtable-scope.dh-v4 .dh-rail { padding: 12px; }
+  .airtable-scope.dh-v4 .dh-section-layout { padding: 12px; }
+  .airtable-scope.dh-v4 .dh-rail { grid-template-columns: 1fr; }
+  .airtable-scope.dh-v4 .at-greet {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    padding: 13px;
+  }
+  .airtable-scope.dh-v4 .at-greet__r,
+  .airtable-scope.dh-v4 .at-greet__r:has(.dh-scope),
+  .airtable-scope.dh-v4 .at-greet__r:not(:has(.dh-scope)) {
+    width: 100%;
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+  }
+  .airtable-scope.dh-v4 .at-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .airtable-scope.dh-v4 .at-dash-grid-3 { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ohamar Bridge · Phase 1</title>
+    <style>
+      :root {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        color: #e8eaf6;
+        background: #0e0d1c;
+      }
+      body { margin: 0; padding: 24px; max-width: 720px; }
+      h1 { font-size: 18px; margin: 0 0 8px; }
+      .sub { color: #9fa3c7; font-size: 13px; margin-bottom: 20px; }
+      .card {
+        background: #181729;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      }
+      .row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+      .ok { color: #34d399; }
+      .bad { color: #f87171; }
+      label { display: block; font-size: 12px; color: #9fa3c7; margin: 10px 0 4px; }
+      input, select, textarea {
+        width: 100%;
+        box-sizing: border-box;
+        background: #0e0d1c;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #e8eaf6;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+      button {
+        margin-top: 12px;
+        background: #6c7de8;
+        color: #fff;
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      pre {
+        background: #0e0d1c;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 11px;
+        overflow: auto;
+        max-height: 220px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Ohamar Bridge · Phase 1</h1>
+    <p class="sub">
+      CRM / test panel → Ohamar gateways (zaloclaw). Không dual zca-js.
+      Dry-run an toàn khi bot offline.
+    </p>
+
+    <div class="card" id="bots">Loading bots…</div>
+
+    <div class="card">
+      <strong>Test send</strong>
+      <label>Bot</label>
+      <select id="bot">
+        <option value="main">main · Gia Huy</option>
+        <option value="worker">worker · Minh Phát</option>
+      </select>
+      <label>Target (Zalo user id / group id)</label>
+      <input id="target" placeholder="threadId / uid" />
+      <label>Text</label>
+      <textarea id="text" rows="3">[bridge test] xin chào từ Ohamar Bridge</textarea>
+      <label><input type="checkbox" id="dry" checked /> Dry-run (không gửi Zalo)</label>
+      <button type="button" id="send">Gửi</button>
+      <pre id="out">{}</pre>
+    </div>
+
+    <script>
+      async function j(url, opts) {
+        const r = await fetch(url, opts);
+        return r.json();
+      }
+      async function loadBots() {
+        const data = await j("/v1/bots");
+        const el = document.getElementById("bots");
+        el.innerHTML =
+          "<strong>2 bot</strong>" +
+          data.bots
+            .map(
+              (b) =>
+                `<div class="row" style="margin-top:8px">
+                  <div>
+                    <div>${b.label}</div>
+                    <div style="font-size:12px;color:#9fa3c7">${b.id} · :${b.port}</div>
+                  </div>
+                  <div class="${b.listening ? "ok" : "bad"}">
+                    ${b.listening ? "listening" : "offline"}
+                    ${b.credentials_present ? " · creds OK" : " · no creds"}
+                  </div>
+                </div>`,
+            )
+            .join("") +
+          `<div style="margin-top:10px;font-size:12px;color:#9fa3c7">dry_run env: ${data.dry_run}</div>`;
+      }
+      document.getElementById("send").onclick = async () => {
+        const body = {
+          bot: document.getElementById("bot").value,
+          target: document.getElementById("target").value,
+          text: document.getElementById("text").value,
+          dry_run: document.getElementById("dry").checked,
+        };
+        const r = await j("/v1/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+        loadBots();
+      };
+      loadBots();
+      setInterval(loadBots, 5000);
+    </script>
+  </body>
+</html>

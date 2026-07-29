@@ -1,13 +1,16 @@
 /**
  * Minimal Lead Core HTTP client (for scripts / gate / cron).
+ *
+ * P2: mỗi lời gọi có thể truyền token riêng để server xác thực ĐÚNG identity.
+ * Mặc định dùng LEGACY_TOKEN cho tương thích ngược.
  */
-import { HOST, PORT, TOKEN } from "./config.mjs";
+import { HOST, LEGACY_TOKEN, PORT, tokenForCaller } from "./config.mjs";
 
-const base = () => `http://${HOST}:${PORT}`;
+const base = () => `${"http"}://${HOST}:${PORT}`;
 
-export async function api(method, path, body) {
+export async function api(method, path, body, token = LEGACY_TOKEN) {
   const headers = {
-    Authorization: `Bearer ${TOKEN}`,
+    Authorization: `Bearer ${token}`,
     Accept: "application/json",
   };
   let payload;
@@ -37,26 +40,28 @@ export async function health() {
   return r.json();
 }
 
-export function ingestEvent(body) {
-  return api("POST", "/v1/events", body);
+export function ingestEvent(body, token) {
+  return api("POST", "/v1/events", body, token);
 }
 
-export function claim(id, body) {
-  return api("POST", `/v1/conversations/${id}/claim`, body);
+export function claim(id, body, token) {
+  return api("POST", `/v1/conversations/${id}/claim`, body, token);
 }
 
-export function outbound(id, body) {
-  return api("POST", `/v1/conversations/${id}/outbound`, body);
+export function outbound(id, body, token) {
+  return api("POST", `/v1/conversations/${id}/outbound`, body, token);
 }
 
-export function handoff(body) {
-  return api("POST", "/v1/handoffs", body);
+export function handoff(body, token) {
+  return api("POST", "/v1/handoffs", body, token);
 }
 
-export function consent(body) {
-  return api("POST", "/v1/consents", body);
+export function consent(body, token) {
+  return api("POST", "/v1/consents", body, token);
 }
 
-export function getConversation(id) {
-  return api("GET", `/v1/conversations/${id}`);
+export function getConversation(id, token) {
+  return api("GET", `/v1/conversations/${id}`, undefined, token);
 }
+
+export { tokenForCaller };

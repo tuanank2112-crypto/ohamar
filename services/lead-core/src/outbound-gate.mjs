@@ -17,7 +17,7 @@
  * Exit 2 if denied (409) — DO NOT send.
  * Exit 1 on other errors.
  */
-import { claim, ingestEvent, outbound } from "./client.mjs";
+import { claim, ingestEvent, outbound, tokenForCaller } from "./client.mjs";
 
 function arg(name, def = null) {
   const i = process.argv.indexOf(`--${name}`);
@@ -37,6 +37,10 @@ const text = arg("text") || "";
 const doClaim = flag("claim");
 const asJson = flag("json");
 
+// P2: gửi ĐÚNG token của caller để identity ở server khớp với --caller.
+// Ưu tiên --token, sau đó LEAD_CORE_TOKENS theo identity, cuối cùng LEGACY_TOKEN.
+const token = arg("token") || tokenForCaller(caller);
+
 if (!caller || !channel || !userId || !threadId) {
   console.error(
     "Usage: outbound-gate --caller <id> --channel <ch> --user-id <u> --thread-id <t> [--text ...] [--claim]",
@@ -45,28 +49,35 @@ if (!caller || !channel || !userId || !threadId) {
 }
 
 try {
-  const ev = await ingestEvent({
-    channel,
-    source_user_id: userId,
-    thread_id: threadId,
-    source_message_id: `gate-in-${messageId}`,
-    text: text ? `[outbound-gate context] ${text.slice(0, 80)}` : null,
-    actor: caller,
-  });
+  const ev = await ingestEvent(
+    {
+      channel,
+      source_user_id: userId,
+      thread_id: threadId,
+      source_message_id: `gate-in-${messageId}`,
+      text: text ? `[outbound-gate context] ${text.slice(0, 80)}` : null,
+      actor: caller,
+    },
+    token,
+  );
   let conv = ev.conversation;
   if (doClaim || conv.owner === "none" || conv.owner === caller) {
-    const c = await claim(conv.id, { caller, version: conv.version });
+    const c = await claim(conv.id, { caller, version: conv.version }, token);
     conv = c.conversation || c;
   }
 
-  const out = await outbound(conv.id, {
-    caller,
-    version: conv.version,
-    idempotency_key: `out:${channel}:${threadId}:${messageId}`,
-    text,
-    channel,
-    thread_id: threadId,
-  });
+  const out = await outbound(
+    conv.id,
+    {
+      caller,
+      version: conv.version,
+      idempotency_key: `out:${channel}:${threadId}:${messageId}`,
+      text,
+      channel,
+      thread_id: threadId,
+    },
+    token,
+  );
 
   if (!out.allowed) {
     if (asJson) console.log(JSON.stringify({ ok: false, ...out }, null, 2));

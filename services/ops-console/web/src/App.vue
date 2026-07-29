@@ -654,8 +654,13 @@ watch(selectedId, () => {
             </p>
 
             <div ref="messagesEl" class="ops-messages">
-              <div v-for="m in messages" :key="m.id" class="ops-bubble" :class="m.role">
-                <div class="who">{{ who(m.role) }}</div>
+              <div
+                v-for="m in messages"
+                :key="m.id"
+                class="ops-bubble"
+                :class="[m.role, { group: isGroup(thread) }]"
+              >
+                <div class="who">{{ who(m, thread) }}</div>
                 <div>{{ m.text }}</div>
                 <div class="time">
                   {{ fmtTime(m.at)

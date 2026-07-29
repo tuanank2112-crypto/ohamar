@@ -42,7 +42,7 @@ cd C:\ohamar-deploy\ohamar
 
 # Nếu chưa có .git:
 git init
-git remote add origin https://github.com/<USER>/ohamar.git
+git remote add origin https://github.com/tuanank2112-crypto/ohamar.git
 
 # Auth: Personal Access Token (repo scope) khi git hỏi password
 # hoặc: gh auth login

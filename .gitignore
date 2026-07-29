@@ -28,5 +28,11 @@ apps/crm-ui/node_modules/
 apps/crm-ui/dist/
 # fb local
 services/fb-messenger/.env
+# vendored deps: chỉ bỏ node_modules, GIỮ lại source (ví dụ vendor/zaloclaw/src)
 vendor/
-on, sys
+
+apps/zalocrm/**/node_modules/
+apps/zalocrm/**/dist/
+apps/zalocrm/.env
+services/ohamar-bridge/data/
+services/lead-core/data/test-*.db*

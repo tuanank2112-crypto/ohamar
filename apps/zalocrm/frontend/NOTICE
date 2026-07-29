@@ -1,0 +1,21 @@
+ZaloCRM / Monarch frontend (apps/crm-ui)
+========================================
+
+This tree is a copy of the ZaloCRM community frontend (Vue 3 + Vite + Vuetify
++ Monarch UI) for use as a **UI reference / component library** inside the
+Ohamar monorepo.
+
+Copyright (C) 2026 Nguyen Tien Loc (Loc Nguyen) and ZaloCRM contributors.
+Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+See upstream: https://github.com/locphamnguyen/ZaloCRM
+
+IMPORTANT — Ohamar channel strategy (direction B)
+-------------------------------------------------
+- Zalo personal account sessions are owned ONLY by Ohamar (zaloclaw / gateway).
+- Do NOT run this app's original Zalo channel stack (CRM zca-js pool) against
+  the same nick as Ohamar.
+- This package is NOT wired to Ohamar APIs by default. Most screens expect the
+  ZaloCRM backend. Port views incrementally to Ohamar/ops-console APIs.
+
+If you modify this UI and offer it as a network service, AGPL §13 requires
+providing Corresponding Source to users.
