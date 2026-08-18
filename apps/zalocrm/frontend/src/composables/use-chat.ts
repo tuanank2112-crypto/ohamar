@@ -11,7 +11,7 @@ import { usePrivacyStore } from '@/stores/privacy';
 import { useWorkScope } from '@/composables/use-work-scope';
 import { classifyIncoming } from '@/composables/work-scope-logic';
 import { useToast } from '@/composables/use-toast';
-import { chooseConversationPreview } from '@/composables/conversation-preview';
+import { mergeConversationList } from '@/composables/conversation-list-state';
 
 interface ZaloAccount {
   id: string;
@@ -261,54 +261,6 @@ function evictOldConvCacheIfNeeded() {
   for (let i = 0; i < evictCount; i++) conversationsCache.delete(entries[i][0]);
 }
 
-// Merge contact: backend list endpoint trả 14 field hẹp; detail endpoint /conversations/:id
-// trả full ~50 field. Khi list refresh chạy sau detail load, MERGE giữ field detail
-// (gender/totals/birthDate/lastOutboundAt/autoTags/priorityScore...) thay vì replace.
-function mergeContactPreserveDetail<T extends { id?: string } | null | undefined>(
-  existing: T,
-  incoming: T,
-): T {
-  if (!incoming) return incoming;
-  if (!existing || existing.id !== incoming.id) return incoming;
-  return { ...existing, ...incoming } as T;
-}
-
-/**
- * Merge list incoming (fresh fetch) với existing (state hiện tại):
- * - Conv có trong incoming: lấy fresh + preserve contact detail
- * - Conv có trong existing nhưng KHÔNG trong incoming + nằm trong preserveIds
- *   (vd conv stub từ Lead Pool đang được select, lastMessageAt=null không vào
- *   top 100 fresh) → giữ lại + APPEND vào CUỐI (vì lastMessageAt=null thuộc cuối).
- *   Fix 2026-05-29: trước đây stub bị wipe → UI clear trắng khi fetchConversations rerun.
- */
-function mergeConvListPreserveDetail(
-  existing: Conversation[],
-  incoming: Conversation[],
-  preserveIds?: Set<string>,
-): Conversation[] {
-  const existingMap = new Map(existing.map(c => [c.id, c]));
-  const incomingIds = new Set(incoming.map(c => c.id));
-  const merged: Conversation[] = incoming.map(c => {
-    const prev = existingMap.get(c.id);
-    if (!prev) return c;
-    return {
-      ...c,
-      contact: mergeContactPreserveDetail(prev.contact, c.contact),
-      messages: chooseConversationPreview(prev.messages, c.messages),
-    };
-  });
-  // Preserve stub/selected conv that didn't make incoming list
-  if (preserveIds && preserveIds.size > 0) {
-    for (const id of preserveIds) {
-      if (!incomingIds.has(id)) {
-        const stub = existingMap.get(id);
-        if (stub) merged.push(stub); // append cuối — lastMessageAt=null sort cuối tự nhiên
-      }
-    }
-  }
-  return merged;
-}
-
 export function useChat() {
   const authStore = useAuthStore();
   const privacyStore = usePrivacyStore();
@@ -351,6 +303,7 @@ export function useChat() {
   const aiConfig = ref<AiConfig>({ provider: 'anthropic', model: 'claude-sonnet-4-6', maxDaily: 500, enabled: true });
   let socket: Socket | null = null;
   let convSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  let latestConversationRequest = 0;
   // work-scope 2026-06-15 — badge "N tin nick khác": đếm tin OUT-OF-SCOPE per nick.
   // CHỈ đếm nick CÓ QUYỀN (server đã lọc nên accountId tới đây luôn trong quyền). Reset
   // khi đổi scope sang nick đó (T7). Bounded bởi số nick (≤50).
@@ -397,6 +350,7 @@ export function useChat() {
   const extraFilters = ref<Record<string, string>>({});
 
   async function fetchConversations(opts?: { bypassCache?: boolean }) {
+    const requestId = ++latestConversationRequest;
     const params = {
       limit: 100,
       search: searchQuery.value,
@@ -426,7 +380,7 @@ export function useChat() {
 
     if (cached) {
       logCacheEvent('hit', cacheKey);
-      conversations.value = mergeConvListPreserveDetail(conversations.value, cached.data, preserveIds);
+      conversations.value = mergeConversationList(conversations.value, cached.data, preserveIds);
     } else {
       if (!opts?.bypassCache) logCacheEvent('miss', cacheKey);
       // Spinner chỉ hiện khi state thực sự rỗng (first load). bypassCache khi
@@ -444,11 +398,13 @@ export function useChat() {
       evictOldConvCacheIfNeeded();
       // Merge để giữ detail fields (Contact full ~50 field từ /conversations/:id)
       // không bị wipe bởi narrow list response (14 field).
-      conversations.value = mergeConvListPreserveDetail(conversations.value, fresh, preserveIds);
+      if (requestId === latestConversationRequest) {
+        conversations.value = mergeConversationList(conversations.value, fresh, preserveIds);
+      }
     } catch (err) {
       console.error('Failed to fetch conversations:', err);
     } finally {
-      loadingConvs.value = false;
+      if (requestId === latestConversationRequest) loadingConvs.value = false;
     }
   }
 
