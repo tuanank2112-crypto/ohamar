@@ -9,7 +9,7 @@ const OHAMAR_ROOT = process.env.OHAMAR_ROOT || path.resolve(__dirname, "../../..
 export const BOTS = {
   main: {
     id: "main",
-    label: "Gia Huy Vicamed",
+    label: "Mailinh",
     port: Number(process.env.OHAMAR_MAIN_PORT || 18789),
     host: process.env.OHAMAR_MAIN_HOST || "127.0.0.1",
     stateDir: path.join(OHAMAR_ROOT, "data"),

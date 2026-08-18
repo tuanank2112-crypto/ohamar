@@ -751,7 +751,7 @@ export async function chatRoutes(app: FastifyInstance) {
     if (lastMessageWithin) {
       const ms = lastMessageWithin === '24h' ? 24 * 3600e3
         : lastMessageWithin === '7d' ? 7 * 24 * 3600e3
-        : lastMessageWithin === '30d' ? 30 * 24 * 3600e3 : 0;
+          : lastMessageWithin === '30d' ? 30 * 24 * 3600e3 : 0;
       if (ms > 0) {
         where.lastMessageAt = { ...(where.lastMessageAt || {}), gte: new Date(Date.now() - ms) };
       } else if (lastMessageWithin === '>30d') {
@@ -911,7 +911,7 @@ export async function chatRoutes(app: FastifyInstance) {
           updatedAt: true,                     // last status change — dùng cho pendingDaysLabel
           crmTagsPerNick: true,                // per-pair CRM tags (kèm Zalo-mirrored "🔵 X")
           zaloLabels: true,                    // 2026-06-06: tag Zalo Real native {id,name,color} —
-                                               // cột 2 render tag Zalo từ đây (màu CHUẨN = zalo_labels.color)
+          // cột 2 render tag Zalo từ đây (màu CHUẨN = zalo_labels.color)
           aliasInNick: true,                   // "Tên gợi nhớ" Zalo, sync 2-way (ui-phase5)
           // ── Per-pair counter ─────────────────────────────────────────────
           // KHÔNG include trước đây gây bug: header MessageThread cột 3 đọc
@@ -1067,7 +1067,7 @@ export async function chatRoutes(app: FastifyInstance) {
           zaloLabels: true,
           crmTagsPerNick: true,
           autoTags: true, // FIX 2026-06-18: detail thiếu autoTags → mở chat rebuild tag
-                          // mất auto-tag (vd "Hoạt động"). List có autoTags; thêm để parity.
+          // mất auto-tag (vd "Hoạt động"). List có autoTags; thêm để parity.
           aliasInNick: true,
         },
       });
@@ -1609,6 +1609,107 @@ export async function chatRoutes(app: FastifyInstance) {
     }
     // ── END M53 Virtual gate ───────────────────────────────────────────────
 
+    // ── OHAMAR BRIDGE gate: nick ẢO do bot zaloclaw sở hữu (zaloUid 'ohamar:main'|'ohamar:worker') ──
+    // CRM = frontend; nick ảo KHÔNG có phiên trong zaloPool. Sale gõ ở đây → đẩy sang ohamar-bridge
+    // (/v1/send) → bot gateway gửi Zalo THẬT. Đồng thời bật handoff (ai-mode=human_paused) để bot
+    // NGỪNG auto-reply thread này. Short-circuit TRƯỚC zaloPool để né 400 "not connected".
+    {
+      const zUid = conversation.zaloAccount.zaloUid || '';
+      if (zUid.startsWith('ohamar:')) {
+        const bot = zUid === 'ohamar:worker' ? 'worker' : 'main';
+        const target = conversation.externalThreadId || '';
+        const isGroup = conversation.threadType === 'group';
+        if (!target) return reply.status(400).send({ error: 'Hội thoại thiếu externalThreadId (thread Zalo).' });
+
+        const BRIDGE_URL = process.env.OHAMAR_BRIDGE_URL || 'http://host.docker.internal:18794';
+        const BRIDGE_TOKEN = process.env.OHAMAR_BRIDGE_TOKEN || process.env.OHAMAR_BRIDGE_TOKEN || process.env.BRIDGE_TOKEN || '';
+        const bridgeHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          ...(BRIDGE_TOKEN ? { Authorization: `Bearer ${BRIDGE_TOKEN}` } : {}),
+        };
+
+        // 1) Gửi ra Zalo qua bridge (force:true — sale chủ động gửi)
+        let bridgeRes: { ok?: boolean; dry_run?: boolean; via?: string; result?: any; error?: string } = {};
+        let sendFail: { reason: string; code: string | null } | null = null;
+        try {
+          const r = await fetch(`${BRIDGE_URL}/v1/send`, {
+            method: 'POST',
+            headers: bridgeHeaders,
+            body: JSON.stringify({ bot, target, text: content, is_group: isGroup, force: true }),
+          });
+          const txt = await r.text();
+          bridgeRes = txt ? JSON.parse(txt) : {};
+          if (!r.ok || bridgeRes.ok === false) {
+            sendFail = { reason: bridgeRes?.error || `bridge ${r.status}`, code: String(r.status) };
+          }
+        } catch (e) {
+          sendFail = { reason: `bridge unreachable: ${String((e as Error)?.message || e)}`, code: null };
+        }
+
+        // 2) Lưu tin (mirror virtual gate) — kèm sendStatus nếu bridge fail
+        try {
+          const bMsgId = String(bridgeRes?.result?.msgId ?? bridgeRes?.result?.message?.msgId ?? '');
+          const localMsgId = bMsgId ? `ohamar:${bMsgId}` : `bridge:${randomUUID()}`;
+          const message = await prisma.message.create({
+            data: {
+              id: randomUUID(),
+              conversationId: id,
+              zaloMsgId: localMsgId,
+              zaloMsgIdNum: null,
+              senderType: 'self',
+              senderUid: zUid,
+              senderName: 'Staff',
+              content,
+              contentType: 'text',
+              sentAt: new Date(),
+              repliedByUserId: user.id,
+              sentVia: 'bridge', // đánh dấu chống lặp với echo bot
+              clientEchoId: echoId,
+              metadata: {
+                sender: { kind: 'user_crm', name: userFullName },
+                ohamarBridge: { bot, target, via: bridgeRes?.via ?? null, dryRun: bridgeRes?.dry_run ?? null },
+                ...(sendFail ? { sendStatus: 'failed', failReason: sendFail.reason, failCode: sendFail.code, failedAt: new Date().toISOString() } : {}),
+              },
+            },
+            include: { repliedBy: { select: { id: true, fullName: true, email: true } } },
+          });
+
+          await prisma.conversation.update({
+            where: { id },
+            data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 },
+          });
+
+          // 3) HANDOFF: bật human_paused → bot ngừng auto-reply thread này (fire-and-forget)
+          void fetch(`${BRIDGE_URL}/v1/ai-mode`, {
+            method: 'POST',
+            headers: bridgeHeaders,
+            body: JSON.stringify({ bot, thread_id: target, mode: 'human_paused', actor: `crm:${user.id}` }),
+          }).catch(() => { });
+
+          const safeMessage = { ...message, zaloMsgIdNum: null as string | null, echoId };
+          const io = (app as any).io as Server;
+          await emitChatMessage({
+            io,
+            orgId: user.orgId,
+            accountId: conversation.zaloAccountId,
+            conversationId: id,
+            message: safeMessage,
+            privacyMode: conversation.zaloAccount.privacyMode,
+            ownerUserId: conversation.zaloAccount.ownerUserId,
+            ...(echoId ? { extra: { echoId } } : {}),
+          });
+
+          return safeMessage;
+        } catch (err) {
+          logger.error('[chat] Ohamar bridge message save error:', err);
+          return reply.status(500).send({ error: 'Failed to save ohamar bridge message' });
+        }
+      }
+    }
+    // ── END OHAMAR BRIDGE gate ──
+
+
+
     const instance = zaloPool.getInstance(conversation.zaloAccountId);
     if (!instance?.api) return reply.status(400).send({ error: 'Zalo account not connected' });
 
@@ -1944,224 +2045,224 @@ export async function chatRoutes(app: FastifyInstance) {
     // NGAY {accepted}, vòng gửi chạy detached. Tin vẫn hiện live qua socket (emitChatMessage mỗi tin).
     // Lỗi từng tin chỉ log (không có HTTP response để trả). Gate validation phía trên VẪN đồng bộ.
     void (async () => {
-    let sentCount = 0;
-    const errors: Array<{ index: number; type: string; message: string }> = [];
-    let lastMessageRow: { id: string; content: string | null; contentType: string; sentAt: Date } | null = null;
+      let sentCount = 0;
+      const errors: Array<{ index: number; type: string; message: string }> = [];
+      let lastMessageRow: { id: string; content: string | null; contentType: string; sentAt: Date } | null = null;
 
-    for (let i = 0; i < resolved.length; i++) {
-      const m = resolved[i];
-      if (i > 0) await new Promise((r) => setTimeout(r, 800 + Math.floor(Math.random() * 1700))); // 0.8–2.5s
+      for (let i = 0; i < resolved.length; i++) {
+        const m = resolved[i];
+        if (i > 0) await new Promise((r) => setTimeout(r, 800 + Math.floor(Math.random() * 1700))); // 0.8–2.5s
 
-      const cleanups: Array<() => Promise<void>> = [];
-      // 1 component → 1+ tin cần persist. Album = N ảnh gửi riêng từng cái (mỗi cái
-      // 1 zaloMsgId riêng → tránh đụng @@unique([conversationId, zaloMsgId])).
-      // content lưu THEO shape chat UI native render: image {href,thumb,size},
-      // file {href,name,size,mime}, video {href,thumb,...} (khớp chat-attachment-routes).
-      // album*: gom N ảnh album thành 1 cụm trong CRM (message-bubble gom theo albumKey).
-      const toPersist: Array<{ sdkResult: unknown; content: string; contentType: string; albumKey?: string; albumIndex?: number; albumTotal?: number }> = [];
-      try {
-        if (m.messageType === 'text') {
-          // D6 (2026-06-13): GIỮ format khi có biến — dịch offset style theo giá trị thật (an toàn).
-          const rawStyles = Array.isArray(m.payload.styles) ? m.payload.styles : [];
-          let rendered = m.payload.text;
-          let styles = rawStyles;
-          if (contactId) {
-            const det = await renderTemplateDetailed(m.payload.text, contactId, zaloAccountId);
-            rendered = det.rendered;
-            styles = rawStyles.length ? (shiftStylesForRender(m.payload.text, rawStyles, det.values) ?? []) : rawStyles;
-          }
-          const useStyles = styles.length > 0;
-          const sendPayload: Record<string, unknown> = { msg: rendered };
-          if (useStyles) sendPayload.styles = styles;
-          const sdkResult = await zaloOps.sendMessage(zaloAccountId, threadId, threadType, sendPayload, io);
-          toPersist.push({
-            sdkResult,
-            content: useStyles
-              ? JSON.stringify({ title: rendered, action: 'rtf', params: JSON.stringify({ styles }) })
-              : rendered,
-            contentType: useStyles ? 'rich' : 'text',
-          });
-        } else if (m.messageType === 'image') {
-          const caption = await renderCaption(m.payload.caption);
-          const dl = await downloadMediaToTemp({ url: m.payload.url }, 'image');
-          cleanups.push(dl.cleanup);
-          const sdkResult = await zaloOps.sendFile(zaloAccountId, threadId, threadType, [dl.path], io, caption);
-          toPersist.push({
-            sdkResult,
-            content: JSON.stringify({ href: m.payload.url, thumb: m.payload.url, size: 0 }),
-            contentType: 'image',
-          });
-        } else if (m.messageType === 'album') {
-          // D2 (2026-06-13): THỐNG NHẤT với automation — gửi GỘP 1 cụm album (sendImage nhiều path)
-          // thay vì từng ảnh lẻ, để khách thấy GIỐNG nhau dù gửi tay hay tự động. Cap 12 ảnh/lần.
-          const allItems = m.payload.items.slice(0, 12);
-          if (m.payload.items.length > 12) {
-            logger.warn(`[send-block] album ${m.payload.items.length} ảnh > 12 — chỉ gửi 12 ảnh đầu (giới hạn SDK).`);
-          }
-          const paths: string[] = [];
-          for (const it of allItems) {
-            const dl = await downloadMediaToTemp({ url: it.url }, 'image');
-            cleanups.push(dl.cleanup);
-            paths.push(dl.path);
-          }
-          const albumCaption = await renderCaption(allItems[0]?.caption);
-          const sdkResult = await zaloOps.sendImage(zaloAccountId, threadId, threadType, paths, io, albumCaption);
-          // Khách nhận 1 cụm album (gửi gộp). CRM render mỗi ảnh = 1 Message {href,thumb} NHƯNG gắn
-          // albumKey/albumIndex/albumTotal để message-bubble GOM lại thành 1 album (MessageThread:2302).
-          // sdkResult gắn ảnh đầu (lấy zaloMsgId), ảnh sau để trống id.
-          const albumKey = randomUUID();
-          allItems.forEach((it, k) => {
+        const cleanups: Array<() => Promise<void>> = [];
+        // 1 component → 1+ tin cần persist. Album = N ảnh gửi riêng từng cái (mỗi cái
+        // 1 zaloMsgId riêng → tránh đụng @@unique([conversationId, zaloMsgId])).
+        // content lưu THEO shape chat UI native render: image {href,thumb,size},
+        // file {href,name,size,mime}, video {href,thumb,...} (khớp chat-attachment-routes).
+        // album*: gom N ảnh album thành 1 cụm trong CRM (message-bubble gom theo albumKey).
+        const toPersist: Array<{ sdkResult: unknown; content: string; contentType: string; albumKey?: string; albumIndex?: number; albumTotal?: number }> = [];
+        try {
+          if (m.messageType === 'text') {
+            // D6 (2026-06-13): GIỮ format khi có biến — dịch offset style theo giá trị thật (an toàn).
+            const rawStyles = Array.isArray(m.payload.styles) ? m.payload.styles : [];
+            let rendered = m.payload.text;
+            let styles = rawStyles;
+            if (contactId) {
+              const det = await renderTemplateDetailed(m.payload.text, contactId, zaloAccountId);
+              rendered = det.rendered;
+              styles = rawStyles.length ? (shiftStylesForRender(m.payload.text, rawStyles, det.values) ?? []) : rawStyles;
+            }
+            const useStyles = styles.length > 0;
+            const sendPayload: Record<string, unknown> = { msg: rendered };
+            if (useStyles) sendPayload.styles = styles;
+            const sdkResult = await zaloOps.sendMessage(zaloAccountId, threadId, threadType, sendPayload, io);
             toPersist.push({
-              sdkResult: k === 0 ? sdkResult : {},
-              content: JSON.stringify({ href: it.url, thumb: it.url, size: 0 }),
-              contentType: 'image',
-              albumKey, albumIndex: k, albumTotal: allItems.length,
+              sdkResult,
+              content: useStyles
+                ? JSON.stringify({ title: rendered, action: 'rtf', params: JSON.stringify({ styles }) })
+                : rendered,
+              contentType: useStyles ? 'rich' : 'text',
             });
-          });
-        } else if (m.messageType === 'video') {
-          const caption = await renderCaption(m.payload.caption);
-          const dl = await downloadMediaToTemp({ url: m.payload.url }, 'video');
-          cleanups.push(dl.cleanup);
-          let sdkResult: unknown;
-          const videoLimit = await zaloRateLimiter.reserveSend(zaloAccountId);
-          if (!videoLimit.allowed) throw new Error(videoLimit.reason || 'Rate limit');
-          try {
-            sdkResult = await sendNativeVideo({ api: instance.api as any, threadId, threadType, videoPath: dl.path });
-          } catch (vErr) {
-            logger.warn('[send-block] native video lỗi, fallback sendFile:', vErr);
-            sdkResult = await zaloOps.sendFile(zaloAccountId, threadId, threadType, [dl.path], io, caption);
+          } else if (m.messageType === 'image') {
+            const caption = await renderCaption(m.payload.caption);
+            const dl = await downloadMediaToTemp({ url: m.payload.url }, 'image');
+            cleanups.push(dl.cleanup);
+            const sdkResult = await zaloOps.sendFile(zaloAccountId, threadId, threadType, [dl.path], io, caption);
+            toPersist.push({
+              sdkResult,
+              content: JSON.stringify({ href: m.payload.url, thumb: m.payload.url, size: 0 }),
+              contentType: 'image',
+            });
+          } else if (m.messageType === 'album') {
+            // D2 (2026-06-13): THỐNG NHẤT với automation — gửi GỘP 1 cụm album (sendImage nhiều path)
+            // thay vì từng ảnh lẻ, để khách thấy GIỐNG nhau dù gửi tay hay tự động. Cap 12 ảnh/lần.
+            const allItems = m.payload.items.slice(0, 12);
+            if (m.payload.items.length > 12) {
+              logger.warn(`[send-block] album ${m.payload.items.length} ảnh > 12 — chỉ gửi 12 ảnh đầu (giới hạn SDK).`);
+            }
+            const paths: string[] = [];
+            for (const it of allItems) {
+              const dl = await downloadMediaToTemp({ url: it.url }, 'image');
+              cleanups.push(dl.cleanup);
+              paths.push(dl.path);
+            }
+            const albumCaption = await renderCaption(allItems[0]?.caption);
+            const sdkResult = await zaloOps.sendImage(zaloAccountId, threadId, threadType, paths, io, albumCaption);
+            // Khách nhận 1 cụm album (gửi gộp). CRM render mỗi ảnh = 1 Message {href,thumb} NHƯNG gắn
+            // albumKey/albumIndex/albumTotal để message-bubble GOM lại thành 1 album (MessageThread:2302).
+            // sdkResult gắn ảnh đầu (lấy zaloMsgId), ảnh sau để trống id.
+            const albumKey = randomUUID();
+            allItems.forEach((it, k) => {
+              toPersist.push({
+                sdkResult: k === 0 ? sdkResult : {},
+                content: JSON.stringify({ href: it.url, thumb: it.url, size: 0 }),
+                contentType: 'image',
+                albumKey, albumIndex: k, albumTotal: allItems.length,
+              });
+            });
+          } else if (m.messageType === 'video') {
+            const caption = await renderCaption(m.payload.caption);
+            const dl = await downloadMediaToTemp({ url: m.payload.url }, 'video');
+            cleanups.push(dl.cleanup);
+            let sdkResult: unknown;
+            const videoLimit = await zaloRateLimiter.reserveSend(zaloAccountId);
+            if (!videoLimit.allowed) throw new Error(videoLimit.reason || 'Rate limit');
+            try {
+              sdkResult = await sendNativeVideo({ api: instance.api as any, threadId, threadType, videoPath: dl.path });
+            } catch (vErr) {
+              logger.warn('[send-block] native video lỗi, fallback sendFile:', vErr);
+              sdkResult = await zaloOps.sendFile(zaloAccountId, threadId, threadType, [dl.path], io, caption);
+            }
+            const thumb = m.payload.thumbnailUrl ?? m.payload.url;
+            toPersist.push({
+              sdkResult,
+              content: JSON.stringify({ href: m.payload.url, thumb, thumbUrl: thumb, thumbnail: thumb, size: 0 }),
+              contentType: 'video',
+            });
+          } else if (m.messageType === 'file') {
+            const caption = await renderCaption(m.payload.caption);
+            // 2026-06-13: block file thường chỉ có url+mediaAssetId → truy Kho lấy đủ tên+mime+size.
+            const meta = await resolveMediaMeta(m.payload.mediaAssetId, { filename: m.payload.filename, mimeType: m.payload.mimeType, sizeBytes: m.payload.sizeBytes });
+            // D4: suy tên+đuôi đúng (buildSendFileName) — tránh khách nhận file .bin.
+            const sendName = buildSendFileName(
+              { name: meta.name, originalFilename: meta.name || null },
+              { mimeType: meta.mime, publicUrl: m.payload.url },
+            );
+            const dl = await downloadMediaToTemp({ url: m.payload.url, filename: sendName }, 'file');
+            cleanups.push(dl.cleanup);
+            const sdkResult = await zaloOps.sendFile(zaloAccountId, threadId, threadType, [dl.path], io, caption);
+            toPersist.push({
+              sdkResult,
+              // name+mime+size đủ → CRM message-bubble getFileInfo hiện file-card (không rơi về '🔗 url').
+              // mime trống → ép octet-stream (vẫn !=rỗng + !image → getFileInfo nhận).
+              content: JSON.stringify({ href: m.payload.url, name: sendName, size: meta.size || 0, mime: meta.mime || 'application/octet-stream' }),
+              contentType: 'file',
+            });
+          } else {
+            continue; // friend_request / update_status không áp dụng cho send_message block
           }
-          const thumb = m.payload.thumbnailUrl ?? m.payload.url;
-          toPersist.push({
-            sdkResult,
-            content: JSON.stringify({ href: m.payload.url, thumb, thumbUrl: thumb, thumbnail: thumb, size: 0 }),
-            contentType: 'video',
-          });
-        } else if (m.messageType === 'file') {
-          const caption = await renderCaption(m.payload.caption);
-          // 2026-06-13: block file thường chỉ có url+mediaAssetId → truy Kho lấy đủ tên+mime+size.
-          const meta = await resolveMediaMeta(m.payload.mediaAssetId, { filename: m.payload.filename, mimeType: m.payload.mimeType, sizeBytes: m.payload.sizeBytes });
-          // D4: suy tên+đuôi đúng (buildSendFileName) — tránh khách nhận file .bin.
-          const sendName = buildSendFileName(
-            { name: meta.name, originalFilename: meta.name || null },
-            { mimeType: meta.mime, publicUrl: m.payload.url },
-          );
-          const dl = await downloadMediaToTemp({ url: m.payload.url, filename: sendName }, 'file');
-          cleanups.push(dl.cleanup);
-          const sdkResult = await zaloOps.sendFile(zaloAccountId, threadId, threadType, [dl.path], io, caption);
-          toPersist.push({
-            sdkResult,
-            // name+mime+size đủ → CRM message-bubble getFileInfo hiện file-card (không rơi về '🔗 url').
-            // mime trống → ép octet-stream (vẫn !=rỗng + !image → getFileInfo nhận).
-            content: JSON.stringify({ href: m.payload.url, name: sendName, size: meta.size || 0, mime: meta.mime || 'application/octet-stream' }),
-            contentType: 'file',
-          });
-        } else {
-          continue; // friend_request / update_status không áp dụng cho send_message block
-        }
 
-        for (const p of toPersist) {
-          const zaloMsgId = extractZaloMsgId(p.sdkResult);
-          const created = await prisma.message.create({
-            data: {
-              id: randomUUID(),
+          for (const p of toPersist) {
+            const zaloMsgId = extractZaloMsgId(p.sdkResult);
+            const created = await prisma.message.create({
+              data: {
+                id: randomUUID(),
+                conversationId: id,
+                zaloMsgId: zaloMsgId || null,
+                zaloMsgIdNum: zaloMsgId && /^\d+$/.test(zaloMsgId) ? BigInt(zaloMsgId) : null,
+                senderType: 'self',
+                senderUid: conversation.zaloAccount.zaloUid || '',
+                senderName: 'Staff',
+                content: p.content,
+                contentType: p.contentType,
+                sentAt: new Date(),
+                repliedByUserId: user.id,
+                sentVia: 'user',
+                metadata: senderMeta,
+                // album: gom N ảnh thành 1 cụm trong CRM (message-bubble gom theo albumKey).
+                ...(p.albumKey ? { albumKey: p.albumKey, albumIndex: p.albumIndex, albumTotal: p.albumTotal } : {}),
+              },
+              select: { id: true, content: true, contentType: true, sentAt: true, zaloMsgId: true, zaloMsgIdNum: true, senderType: true, senderUid: true, senderName: true, conversationId: true, repliedByUserId: true, sentVia: true, metadata: true, albumKey: true, albumIndex: true, albumTotal: true },
+            });
+            lastMessageRow = { id: created.id, content: created.content, contentType: created.contentType, sentAt: created.sentAt };
+            sentCount++;
+
+            const safeMessage = { ...created, zaloMsgIdNum: created.zaloMsgIdNum?.toString() ?? null };
+            // PRIVACY 2026-06-11: redact + scope org (emit-chat).
+            await emitChatMessage({
+              io,
+              orgId: user.orgId,
+              accountId: zaloAccountId,
               conversationId: id,
-              zaloMsgId: zaloMsgId || null,
-              zaloMsgIdNum: zaloMsgId && /^\d+$/.test(zaloMsgId) ? BigInt(zaloMsgId) : null,
-              senderType: 'self',
-              senderUid: conversation.zaloAccount.zaloUid || '',
-              senderName: 'Staff',
-              content: p.content,
-              contentType: p.contentType,
-              sentAt: new Date(),
-              repliedByUserId: user.id,
-              sentVia: 'user',
-              metadata: senderMeta,
-              // album: gom N ảnh thành 1 cụm trong CRM (message-bubble gom theo albumKey).
-              ...(p.albumKey ? { albumKey: p.albumKey, albumIndex: p.albumIndex, albumTotal: p.albumTotal } : {}),
-            },
-            select: { id: true, content: true, contentType: true, sentAt: true, zaloMsgId: true, zaloMsgIdNum: true, senderType: true, senderUid: true, senderName: true, conversationId: true, repliedByUserId: true, sentVia: true, metadata: true, albumKey: true, albumIndex: true, albumTotal: true },
-          });
-          lastMessageRow = { id: created.id, content: created.content, contentType: created.contentType, sentAt: created.sentAt };
-          sentCount++;
-
-          const safeMessage = { ...created, zaloMsgIdNum: created.zaloMsgIdNum?.toString() ?? null };
-          // PRIVACY 2026-06-11: redact + scope org (emit-chat).
-          await emitChatMessage({
-            io,
-            orgId: user.orgId,
-            accountId: zaloAccountId,
-            conversationId: id,
-            message: safeMessage,
-            privacyMode: conversation.zaloAccount.privacyMode,
-            ownerUserId: conversation.zaloAccount.ownerUserId,
-          });
+              message: safeMessage,
+              privacyMode: conversation.zaloAccount.privacyMode,
+              ownerUserId: conversation.zaloAccount.ownerUserId,
+            });
+          }
+          // D3 (2026-06-13): gửi media qua Khối (gửi tay) → bump usageCount để đo ảnh/file hiệu quả.
+          // Fire-and-forget, không chặn. album: bump từng item; image/video/file: 1 id.
+          {
+            const p = m.payload as Record<string, unknown>;
+            const ids: string[] = m.messageType === 'album'
+              ? ((p.items as Array<{ mediaAssetId?: string }>) ?? []).map((it) => it.mediaAssetId).filter((x): x is string => !!x)
+              : (m.messageType === 'image' || m.messageType === 'video' || m.messageType === 'file') && p.mediaAssetId
+                ? [p.mediaAssetId as string]
+                : [];
+            for (const aid of ids) bumpUsage(aid).catch(() => { });
+          }
+        } catch (err: any) {
+          const code = err?.code as string | undefined;
+          const msg = err?.message ?? String(err);
+          errors.push({ index: i, type: m.messageType, message: msg });
+          // GỬI NỀN: không còn HTTP response để trả lỗi → chỉ LOG + dừng (tin đã stream live qua socket;
+          // FE đã nhận {accepted} từ trước). Lỗi tin đầu = không gửi được gì, sale gửi lại được.
+          logger.warn(`[send-block] tin ${i + 1}/${resolved.length} (${m.messageType}) lỗi [${code ?? '?'}]: ${msg} — dừng (đã gửi ${sentCount} tin)`);
+          break;
+        } finally {
+          for (const c of cleanups) await c().catch(() => { });
         }
-        // D3 (2026-06-13): gửi media qua Khối (gửi tay) → bump usageCount để đo ảnh/file hiệu quả.
-        // Fire-and-forget, không chặn. album: bump từng item; image/video/file: 1 id.
-        {
-          const p = m.payload as Record<string, unknown>;
-          const ids: string[] = m.messageType === 'album'
-            ? ((p.items as Array<{ mediaAssetId?: string }>) ?? []).map((it) => it.mediaAssetId).filter((x): x is string => !!x)
-            : (m.messageType === 'image' || m.messageType === 'video' || m.messageType === 'file') && p.mediaAssetId
-              ? [p.mediaAssetId as string]
-              : [];
-          for (const aid of ids) bumpUsage(aid).catch(() => {});
+      }
+
+      if (sentCount === 0) {
+        logger.warn(`[send-block] KHÔNG gửi được tin nào (conv=${id} block="${block.name}") errors=${JSON.stringify(errors)}`);
+        return; // thoát IIFE nền — FE đã nhận {accepted}, lỗi này chỉ log.
+      }
+
+      // Cập nhật aggregate (theo tin cuối) + bump usage Khối.
+      if (lastMessageRow) {
+        try {
+          await prisma.conversation.update({
+            where: { id },
+            data: { lastMessageAt: lastMessageRow.sentAt, isReplied: true, unreadCount: 0 },
+          });
+        } catch (err) {
+          logger.warn(`[send-block] conversation aggregate update failed (conv=${id}):`, err);
         }
-      } catch (err: any) {
-        const code = err?.code as string | undefined;
-        const msg = err?.message ?? String(err);
-        errors.push({ index: i, type: m.messageType, message: msg });
-        // GỬI NỀN: không còn HTTP response để trả lỗi → chỉ LOG + dừng (tin đã stream live qua socket;
-        // FE đã nhận {accepted} từ trước). Lỗi tin đầu = không gửi được gì, sale gửi lại được.
-        logger.warn(`[send-block] tin ${i + 1}/${resolved.length} (${m.messageType}) lỗi [${code ?? '?'}]: ${msg} — dừng (đã gửi ${sentCount} tin)`);
-        break;
-      } finally {
-        for (const c of cleanups) await c().catch(() => {});
+        const aggInput = {
+          conversationId: id,
+          message: {
+            id: lastMessageRow.id,
+            content: lastMessageRow.content,
+            contentType: lastMessageRow.contentType,
+            sentAt: lastMessageRow.sentAt,
+            senderType: 'self' as const,
+          },
+          outboundUserId: user.id,
+        };
+        void applyContactAggregateFromMessage(aggInput);
+        void applyFriendAggregate(aggInput);
       }
-    }
-
-    if (sentCount === 0) {
-      logger.warn(`[send-block] KHÔNG gửi được tin nào (conv=${id} block="${block.name}") errors=${JSON.stringify(errors)}`);
-      return; // thoát IIFE nền — FE đã nhận {accepted}, lỗi này chỉ log.
-    }
-
-    // Cập nhật aggregate (theo tin cuối) + bump usage Khối.
-    if (lastMessageRow) {
-      try {
-        await prisma.conversation.update({
-          where: { id },
-          data: { lastMessageAt: lastMessageRow.sentAt, isReplied: true, unreadCount: 0 },
-        });
-      } catch (err) {
-        logger.warn(`[send-block] conversation aggregate update failed (conv=${id}):`, err);
-      }
-      const aggInput = {
-        conversationId: id,
-        message: {
-          id: lastMessageRow.id,
-          content: lastMessageRow.content,
-          contentType: lastMessageRow.contentType,
-          sentAt: lastMessageRow.sentAt,
-          senderType: 'self' as const,
+      // Bump cả usageCount (tổng) + manualSendCount (RIÊNG gửi tay, không tính automation).
+      void prisma.block.update({
+        where: { id: block.id },
+        data: {
+          lastUsedAt: new Date(),
+          usageCount: { increment: 1 },
+          manualSendCount: { increment: 1 },
+          lastManualSentAt: new Date(),
         },
-        outboundUserId: user.id,
-      };
-      void applyContactAggregateFromMessage(aggInput);
-      void applyFriendAggregate(aggInput);
-    }
-    // Bump cả usageCount (tổng) + manualSendCount (RIÊNG gửi tay, không tính automation).
-    void prisma.block.update({
-      where: { id: block.id },
-      data: {
-        lastUsedAt: new Date(),
-        usageCount: { increment: 1 },
-        manualSendCount: { increment: 1 },
-        lastManualSentAt: new Date(),
-      },
-    }).catch((err) => logger.warn(`[send-block] bump usage failed: ${err}`));
+      }).catch((err) => logger.warn(`[send-block] bump usage failed: ${err}`));
 
-    logger.info(`[send-block] sent ${sentCount}/${resolved.length} tin từ nick=${zaloAccountId} → conv=${id} block="${block.name}"`);
+      logger.info(`[send-block] sent ${sentCount}/${resolved.length} tin từ nick=${zaloAccountId} → conv=${id} block="${block.name}"`);
     })().catch((err) => logger.error(`[send-block] vòng gửi nền lỗi: ${err?.message ?? err}`));
 
     // GỬI NỀN: trả về NGAY (không chờ vòng gửi) → FE báo "đang gửi", tin hiện live qua socket,

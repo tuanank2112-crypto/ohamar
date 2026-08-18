@@ -8,6 +8,7 @@
  */
 import crypto from "node:crypto";
 import http from "node:http";
+import { feedToCrm } from "./crm-feed.mjs";
 import {
   HOST,
   LEGACY_IDENTITY,
@@ -192,7 +193,20 @@ const server = http.createServer(async (req, res) => {
 
     if (method === "POST" && path === "/v1/events") {
       const body = await readBody(req);
-      return send(res, 200, ingestEvent(body, ctx));
+      const result = ingestEvent(body, ctx);
+      // fan-out sang CRM (chỉ khi có text thật & không phải bản trùng)
+      if (result && !result.duplicate && body.text) {
+        feedToCrm({
+          direction: "in",
+          channel: body.channel,
+          thread_id: body.thread_id,
+          source_user_id: body.source_user_id,
+          source_message_id: body.source_message_id,
+          text: body.text,
+          ts: new Date().toISOString(),
+        });
+      }
+      return send(res, 200, result);
     }
 
     if (method === "POST" && path === "/v1/handoffs") {

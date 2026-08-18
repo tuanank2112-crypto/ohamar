@@ -1,3 +1,4 @@
+import { feedToCrm } from "./crm-feed.mjs";
 import { getDb, nowIso, tx, uuid } from "./db.mjs";
 import { audit } from "./audit.mjs";
 import {
@@ -287,26 +288,23 @@ export function authorizeOutbound(id, body, ctx = {}) {
   const leaseId = uuid();
   const expires = new Date(Date.now() + LEASE_TTL_SEC * 1000).toISOString();
 
-  return tx(() => {
+  const outcome = tx(() => {
     d.prepare(
       `INSERT INTO send_leases (conversation_id, caller, lease_id, version, expires_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(conversation_id) DO UPDATE SET
-         caller = excluded.caller,
-         lease_id = excluded.lease_id,
-         version = excluded.version,
-         expires_at = excluded.expires_at`,
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(conversation_id) DO UPDATE SET
+       caller = excluded.caller,
+       lease_id = excluded.lease_id,
+       version = excluded.version,
+       expires_at = excluded.expires_at`,
     ).run(id, caller, leaseId, conv.version, expires);
 
     const outId = uuid();
     d.prepare(
       `INSERT INTO outbound_log (id, conversation_id, caller, idempotency_key, status, payload_json, created_at)
-       VALUES (?, ?, ?, ?, 'allowed', ?, ?)`,
+     VALUES (?, ?, ?, ?, 'allowed', ?, ?)`,
     ).run(
-      outId,
-      id,
-      caller,
-      idempotencyKey,
+      outId, id, caller, idempotencyKey,
       JSON.stringify({
         text: body.text ?? null,
         media: body.media ?? [],
@@ -317,20 +315,28 @@ export function authorizeOutbound(id, body, ctx = {}) {
     );
 
     audit(id, "outbound.allowed", caller, {
-      idempotency_key: idempotencyKey,
-      lease_id: leaseId,
-      expires_at: expires,
+      idempotency_key: idempotencyKey, lease_id: leaseId, expires_at: expires,
     });
 
     return {
-      allowed: true,
-      duplicate: false,
-      lease_id: leaseId,
-      expires_at: expires,
-      version: conv.version,
-      conversation: conv,
+      allowed: true, duplicate: false, lease_id: leaseId,
+      expires_at: expires, version: conv.version, conversation: conv,
     };
   });
+
+  // fan-out tin bot vừa được phép gửi
+  if (body.text) {
+    feedToCrm({
+      direction: "out",
+      channel: body.channel ?? conv.channel,
+      thread_id: body.thread_id ?? conv.thread_id,
+      source_user_id: conv.source_user_id,
+      source_message_id: `out:${idempotencyKey}`,
+      text: body.text,
+      ts,
+    });
+  }
+  return outcome;
 }
 
 /**

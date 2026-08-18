@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Nguyễn Tiến Lộc
 import { ref, computed } from 'vue';
 import { api } from '@/api/index';
 import { Socket } from 'socket.io-client';
@@ -290,7 +289,14 @@ function mergeConvListPreserveDetail(
   const merged: Conversation[] = incoming.map(c => {
     const prev = existingMap.get(c.id);
     if (!prev) return c;
-    return { ...c, contact: mergeContactPreserveDetail(prev.contact, c.contact) };
+    return {
+      ...c,
+      contact: mergeContactPreserveDetail(prev.contact, c.contact),
+      // Preserve messages from existing state — giữ preview tin mới nhất không bị
+      // API response (có thể cũ hơn) ghi đè. Fix 2026-08-17: vào chat rồi back ra list
+      // thì preview lại hiện tin cũ vì API /conversations trả messages chứa tin cũ nhất.
+      messages: prev.messages && prev.messages.length > 0 ? prev.messages : c.messages,
+    };
   });
   // Preserve stub/selected conv that didn't make incoming list
   if (preserveIds && preserveIds.size > 0) {
@@ -470,7 +476,8 @@ export function useChat() {
       if (!msgType && cliType) {
         // Zalo cliMsgType enum (partial): 1=text, 19=link, 22=video, 23=sticker,
         // 24=voice, 30=file, 32=image, 38=card, 46=location
-        msgType = ({ 1: 'text', 19: 'link', 22: 'video', 23: 'sticker',
+        msgType = ({
+          1: 'text', 19: 'link', 22: 'video', 23: 'sticker',
           24: 'voice', 30: 'file', 32: 'image', 38: 'card', 46: 'location',
         } as Record<number, string>)[cliType] || '';
       }
@@ -946,7 +953,7 @@ export function useChat() {
       for (let i = 0; i < conversations.value.length; i++) {
         const conv = conversations.value[i];
         if (data.conversationId && conv.id !== data.conversationId) continue;
-        const preview = conv.messages?.[0];
+        const preview = conv.messages?.at(-1) ?? conv.messages?.[0];
         if (preview && (preview.id === data.messageId || preview.zaloMsgId === data.zaloMsgId)) {
           conversations.value.splice(i, 1, {
             ...conv,
@@ -973,7 +980,7 @@ export function useChat() {
       for (let i = 0; i < conversations.value.length; i++) {
         const conv = conversations.value[i];
         if (data.conversationId && conv.id !== data.conversationId) continue;
-        const preview = conv.messages?.[0];
+        const preview = conv.messages?.at(-1) ?? conv.messages?.[0];
         if (preview && (preview.id === data.messageId || preview.zaloMsgId === data.zaloMsgId)) {
           const newPreview = { ...preview, content: data.content };
           if (data.editedAt) newPreview.editedAt = data.editedAt;

@@ -765,7 +765,7 @@ function fmtDuration(sec: number): string {
 // invalidate khi tin nhắn đầu đổi (id) hoặc thu hồi. Wrapper giữ API cũ.
 const _previewCache = new WeakMap<Conversation, { sig: string; result: PreviewResult }>();
 function lastMessagePreviewResult(conv: Conversation): PreviewResult {
-  const msg = conv.messages?.[0];
+  const msg = conv.messages?.at(-1) ?? conv.messages?.[0];
   // 2026-06-12 — chữ ký dùng CHÍNH content + editedAt (không phải content.length): tin
   // SỬA cùng độ dài (vd "ok" → "oke" thì khác, nhưng "abc" → "xyz" cùng 3 ký tự) trước
   // đây không invalidate. Fix object-mới ở socket đã che, đây là lớp 2 cho memoize tự đúng.
@@ -777,7 +777,7 @@ function lastMessagePreviewResult(conv: Conversation): PreviewResult {
   return result;
 }
 function computeLastMessagePreview(conv: Conversation): PreviewResult {
-  const msg = conv.messages?.[0];
+  const msg = conv.messages?.at(-1) ?? conv.messages?.[0];
   if (!msg) return { text: '' };
 
   // E04 Tin thu hồi — anh chốt icon 🔂 (proposal 2026-05-21), tone muted

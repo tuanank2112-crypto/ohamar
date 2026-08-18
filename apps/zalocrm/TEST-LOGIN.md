@@ -8,11 +8,11 @@
 
 | | |
 |--|--|
-| SĐT | `0901000001` |
+| SĐT | `84901000001` *(phone lưu format quốc tế, không có số 0 đầu)* |
 | Password | `Demo@1234` |
 | Role | admin (seed) |
 
-Sale khác: `0901000002`…`030` / cùng `Demo@1234` · email `nvN.demo@example.com`
+Sale khác: `84901000002`…`84901000030` / cùng `Demo@1234` · email `nvN.demo@example.com`
 
 ## Ohamar Bridge (Phase 1)
 

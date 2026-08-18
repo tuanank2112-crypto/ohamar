@@ -8,6 +8,8 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../auth/auth-middleware.js';
+import { ingestOhamarEvent, ingestTokenOk, provisionOhamarAccounts } from './ohamar-ingest.js';
+import { prisma } from '../../shared/database/prisma-client.js';
 
 const BRIDGE_URL = (process.env.OHAMAR_BRIDGE_URL || '').replace(/\/$/, '');
 const BRIDGE_TOKEN = (process.env.OHAMAR_BRIDGE_TOKEN || '').trim();
@@ -63,6 +65,56 @@ export async function ohamarBridgeRoutes(app: FastifyInstance): Promise<void> {
       health: health.json,
       bots: bots.json,
     };
+  });
+
+  // Ingest server-to-server từ lead-core (bảo vệ bằng OHAMAR_FEED_TOKEN)
+  app.post('/api/v1/ohamar/ingest', async (request, reply) => {
+    if (!ingestTokenOk(request.headers.authorization)) {
+      return reply.status(401).send({ error: 'unauthorized' });
+    }
+    try {
+      const result = await ingestOhamarEvent(request.body as any);
+      return reply.status(200).send({ ok: true, result });
+    } catch (e) {
+      return reply.status(500).send({ error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
+  // AI gate: bot hỏi TRƯỚC khi auto-reply. allow=false khi sale đã "Tiếp quản"
+  // (handoffStatus=TAKEN) hoặc aiMode=OFF. Fail-open khi thiếu account/conversation.
+  app.get('/api/v1/ohamar/ai-gate', async (request, reply) => {
+    if (!ingestTokenOk(request.headers.authorization)) {
+      return reply.status(401).send({ error: 'unauthorized' });
+    }
+    const q = request.query as Record<string, string>;
+    const account = (q.account || '').trim();            // 'ohamar:main' | 'ohamar:worker'
+    const thread = (q.thread || q.thread_id || '').trim();
+    if (!account || !thread) {
+      return reply.status(400).send({ error: 'account and thread required' });
+    }
+    const acc = await prisma.zaloAccount.findUnique({
+      where: { zaloUid: account },
+      select: { id: true },
+    });
+    if (!acc) return reply.send({ allow: true, reason: 'no_account' });
+
+    const conv = await prisma.conversation.findUnique({
+      where: { zaloAccountId_externalThreadId: { zaloAccountId: acc.id, externalThreadId: thread } },
+      select: { aiMode: true, handoffStatus: true },
+    });
+    if (!conv) return reply.send({ allow: true, reason: 'no_conversation' });
+
+    const paused = conv.handoffStatus === 'TAKEN' || conv.aiMode === 'OFF';
+    return reply.send({ allow: !paused, aiMode: conv.aiMode, handoffStatus: conv.handoffStatus });
+  });
+
+  // Tạo 2 nick ảo (chạy 1 lần)
+  app.post('/api/v1/ohamar/provision-accounts', async (request, reply) => {
+    if (!ingestTokenOk(request.headers.authorization)) {
+      return reply.status(401).send({ error: 'unauthorized' });
+    }
+    const result = await provisionOhamarAccounts((request.body as any) ?? {});
+    return reply.send(result);
   });
 
   app.register(async (authed) => {
