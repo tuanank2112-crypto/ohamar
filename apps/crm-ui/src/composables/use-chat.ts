@@ -835,8 +835,14 @@ export function useChat() {
       }
       // Tin in-scope nhưng không updateColumn2 (vd thread đang mở out-of-scope): cũng dừng
       // optimistic cột-2 để không kéo conv ngoài scope lên list.
+      // FIX 2026-08-18: Group chat KHÔNG có accountId → classifyIncoming trả
+      // updateColumn2=false (isInScope false vì !accountId). Nhưng group conv
+      // vẫn phải update preview + unread. Kiểm tra threadType để bỏ qua guard.
       if (!cls.updateColumn2) {
-        return;
+        const curConv = conversations.value.find(c => c.id === data.conversationId);
+        if (!curConv || curConv.threadType !== 'group') {
+          return;
+        }
       }
 
       // Optimistic update conversation list — tránh fetch full HTTP mỗi message
