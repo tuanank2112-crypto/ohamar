@@ -237,6 +237,7 @@ import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue';
 import type { Conversation, AiSentiment } from '@/composables/use-chat';
 import { api } from '@/api/index';
 import { useToast } from '@/composables/use-toast';
+import { latestConversationMessage } from '@/composables/conversation-preview';
 
 const toast = useToast();
 // Icon chrome — Lucide line (anh chốt 2026-06-08, bỏ ký tự thô).
@@ -291,6 +292,7 @@ const emit = defineEmits<{
   'tab-changed': [tab: string];
   'conversation-moved': [id: string, tab: string];
   'conversation-deleted': [id: string];
+  'conversation-restored': [id: string];
   'compose-opened': [conversationId: string];
   /** Theo dõi (anh chốt 2026-06-15) — toggle follow từ menu → cập nhật chuông cột 2 ngay. */
   'follow-changed': [contactId: string, nickId: string, following: boolean];
@@ -649,6 +651,16 @@ async function confirmDeleteConversation() {
     await api.delete(`/conversations/${convId}`);
     emit('conversation-deleted', convId);
     closeDeleteDialog();
+    toast.undo('Đã xóa hội thoại', async () => {
+      try {
+        await api.post(`/conversations/${convId}/restore`);
+        emit('conversation-restored', convId);
+        toast.success('Đã khôi phục hội thoại');
+      } catch (err) {
+        console.error('Failed to restore conversation:', err);
+        toast.error('Khôi phục hội thoại thất bại');
+      }
+    });
   } catch (err) {
     console.error('Failed to delete conversation:', err);
     toast.error('Lỗi xóa hội thoại — thử lại sau');
@@ -765,7 +777,7 @@ function fmtDuration(sec: number): string {
 // invalidate khi tin nhắn đầu đổi (id) hoặc thu hồi. Wrapper giữ API cũ.
 const _previewCache = new WeakMap<Conversation, { sig: string; result: PreviewResult }>();
 function lastMessagePreviewResult(conv: Conversation): PreviewResult {
-  const msg = conv.messages?.[0];
+  const msg = latestConversationMessage(conv.messages);
   // 2026-06-12 — chữ ký dùng CHÍNH content + editedAt (không phải content.length): tin
   // SỬA cùng độ dài (vd "ok" → "oke" thì khác, nhưng "abc" → "xyz" cùng 3 ký tự) trước
   // đây không invalidate. Fix object-mới ở socket đã che, đây là lớp 2 cho memoize tự đúng.
@@ -777,7 +789,7 @@ function lastMessagePreviewResult(conv: Conversation): PreviewResult {
   return result;
 }
 function computeLastMessagePreview(conv: Conversation): PreviewResult {
-  const msg = conv.messages?.[0];
+  const msg = latestConversationMessage(conv.messages);
   if (!msg) return { text: '' };
 
   // E04 Tin thu hồi — anh chốt icon 🔂 (proposal 2026-05-21), tone muted

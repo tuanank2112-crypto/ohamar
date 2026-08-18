@@ -155,7 +155,7 @@ async function runVirtualChatAiReply(
 
     await prisma.conversation.update({
       where: { id: conversationId },
-      data: { lastMessageAt: new Date() },
+      data: { lastMessageAt: new Date(), deletedAt: null },
     });
 
     // Track quota

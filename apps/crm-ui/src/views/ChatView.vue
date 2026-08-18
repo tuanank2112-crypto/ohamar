@@ -104,6 +104,7 @@
         @update:filters="onFiltersUpdate"
         @conversation-moved="onConversationMoved"
         @conversation-deleted="onConversationDeleted"
+        @conversation-restored="onConversationRestored"
         @compose-opened="onComposeOpened"
         @follow-changed="onFollowChanged"
       />
@@ -605,6 +606,10 @@ function onConversationDeleted(id: string) {
   if (selectedConvId.value === id) {
     router.push({ name: 'Chat' }).catch(() => {});
   }
+  fetchConversations({ bypassCache: true });
+}
+
+function onConversationRestored(_id: string) {
   fetchConversations({ bypassCache: true });
 }
 

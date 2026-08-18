@@ -283,7 +283,7 @@ export async function chatAttachmentRoutes(app: FastifyInstance) {
 
         await prisma.conversation.update({
           where: { id },
-          data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 },
+          data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0, deletedAt: null },
         });
 
         for (const m of created) {

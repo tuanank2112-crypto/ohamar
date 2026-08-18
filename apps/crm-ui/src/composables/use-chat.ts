@@ -10,6 +10,7 @@ import { usePrivacyStore } from '@/stores/privacy';
 import { useWorkScope } from '@/composables/use-work-scope';
 import { classifyIncoming } from '@/composables/work-scope-logic';
 import { useToast } from '@/composables/use-toast';
+import { chooseConversationPreview } from '@/composables/conversation-preview';
 
 interface ZaloAccount {
   id: string;
@@ -292,10 +293,9 @@ function mergeConvListPreserveDetail(
     return {
       ...c,
       contact: mergeContactPreserveDetail(prev.contact, c.contact),
-      // Preserve messages from existing state — giữ preview tin mới nhất không bị
-      // API response (có thể cũ hơn) ghi đè. Fix 2026-08-17: vào chat rồi back ra list
-      // thì preview lại hiện tin cũ vì API /conversations trả messages chứa tin cũ nhất.
-      messages: prev.messages && prev.messages.length > 0 ? prev.messages : c.messages,
+      // Socket/cache có thể mới hơn response đang bay, nhưng không được giữ preview cũ
+      // vô thời hạn. So thời gian và để server thắng khi bằng nhau để reconcile edit/recall.
+      messages: chooseConversationPreview(prev.messages, c.messages),
     };
   });
   // Preserve stub/selected conv that didn't make incoming list

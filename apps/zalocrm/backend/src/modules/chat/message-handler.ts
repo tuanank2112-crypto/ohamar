@@ -1085,6 +1085,9 @@ async function updateConversationAfterMessage(
     updateData.unreadCount = { increment: 1 };
     updateData.isReplied = false;
   }
+  // Một tin mới là tín hiệu khôi phục tự nhiên cho hội thoại đã ẩn.
+  // Nhờ vậy lần reconcile kế tiếp sẽ đưa box chat trở lại list.
+  updateData.deletedAt = null;
   await prisma.conversation.update({ where: { id: conversationId }, data: updateData });
 }
 

@@ -750,7 +750,7 @@ export async function mediaRoutes(app: FastifyInstance) {
 
         await prisma.conversation.update({
           where: { id: conversation.id },
-          data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 },
+          data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0, deletedAt: null },
         });
         await bumpUsage(asset.id);
         // Gắn tag/dự án LÚC GỬI (anh chốt 2026-06-15): sale bấm chip gợi ý → tag dính vào ảnh,
@@ -1398,7 +1398,7 @@ export async function mediaRoutes(app: FastifyInstance) {
         // KHÔNG bao giờ lệch. Tradeoff: sale chờ ~1-2s thấy album (chấp nhận được).
         // KHÔNG bumpUsage/log ở đây nữa — chuyển sang khi echo về (tránh đếm khi gửi lỗi).
         // Vẫn đếm usage NGAY vì gửi đã thành công (sendImage không throw):
-        await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 } });
+        await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0, deletedAt: null } });
         for (const a of assets) {
           await bumpUsage(a.id);
           await logMediaUsage({

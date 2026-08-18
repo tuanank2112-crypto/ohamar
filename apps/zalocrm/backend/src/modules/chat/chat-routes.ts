@@ -846,9 +846,9 @@ export async function chatRoutes(app: FastifyInstance) {
           pins: { select: { id: true } },
           messages: {
             take: 1,
-            // Primary sort by Zalo Snowflake numeric (match 100% Zalo Web), sentAt fallback
-            // cho CRM-sent in-flight messages chưa nhận echo zaloMsgId.
-            orderBy: [{ zaloMsgIdNum: { sort: 'desc', nulls: 'last' } }, { sentAt: 'desc' }],
+            // sentAt phải là khóa chính: tin CRM mới gửi chưa có Zalo echo id vẫn phải
+            // hiện ngoài list thay vì bị một tin Zalo cũ có snowflake đẩy xuống dưới.
+            orderBy: [{ sentAt: 'desc' }, { zaloMsgIdNum: { sort: 'desc', nulls: 'last' } }],
             select: { id: true, zaloMsgId: true, senderUid: true, senderName: true, content: true, contentType: true, senderType: true, sentAt: true, isDeleted: true, editedAt: true, reactions: { select: { emoji: true, reactorId: true, reactorName: true, reactorSource: true } } },
           },
         },
@@ -1565,7 +1565,7 @@ export async function chatRoutes(app: FastifyInstance) {
 
         await prisma.conversation.update({
           where: { id },
-          data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 },
+          data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0, deletedAt: null },
         });
 
         const safeMessage = { ...message, zaloMsgIdNum: null as string | null };
@@ -1676,7 +1676,7 @@ export async function chatRoutes(app: FastifyInstance) {
 
           await prisma.conversation.update({
             where: { id },
-            data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 },
+            data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0, deletedAt: null },
           });
 
           // 3) HANDOFF: bật human_paused → bot ngừng auto-reply thread này (fire-and-forget)
@@ -1879,7 +1879,7 @@ export async function chatRoutes(app: FastifyInstance) {
 
       await prisma.conversation.update({
         where: { id },
-        data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 },
+        data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0, deletedAt: null },
       });
 
       // Tin gửi THẤT BẠI: KHÔNG cộng vào thống kê outbound (chưa thật sự tới khách).
@@ -2232,7 +2232,7 @@ export async function chatRoutes(app: FastifyInstance) {
         try {
           await prisma.conversation.update({
             where: { id },
-            data: { lastMessageAt: lastMessageRow.sentAt, isReplied: true, unreadCount: 0 },
+            data: { lastMessageAt: lastMessageRow.sentAt, isReplied: true, unreadCount: 0, deletedAt: null },
           });
         } catch (err) {
           logger.warn(`[send-block] conversation aggregate update failed (conv=${id}):`, err);
@@ -2384,7 +2384,7 @@ export async function chatRoutes(app: FastifyInstance) {
 
       await prisma.conversation.update({
         where: { id },
-        data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0 },
+        data: { lastMessageAt: new Date(), isReplied: true, unreadCount: 0, deletedAt: null },
       });
 
       const io = (app as any).io as Server;

@@ -93,7 +93,7 @@ export async function sendAutomatedCustomerMessage(
     // Conversation aggregate: outbound → đã trả lời, clear unread.
     await prisma.conversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: sentAt, isReplied: true, unreadCount: 0 },
+      data: { lastMessageAt: sentAt, isReplied: true, unreadCount: 0, deletedAt: null },
     }).catch((e) => logger.warn(`[auto-care-send] update conversation failed (conv=${conversation.id}):`, e));
 
     // Realtime (scope org + privacy) — best-effort.

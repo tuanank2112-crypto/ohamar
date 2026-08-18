@@ -11,6 +11,7 @@ import { usePrivacyStore } from '@/stores/privacy';
 import { useWorkScope } from '@/composables/use-work-scope';
 import { classifyIncoming } from '@/composables/work-scope-logic';
 import { useToast } from '@/composables/use-toast';
+import { chooseConversationPreview } from '@/composables/conversation-preview';
 
 interface ZaloAccount {
   id: string;
@@ -290,7 +291,11 @@ function mergeConvListPreserveDetail(
   const merged: Conversation[] = incoming.map(c => {
     const prev = existingMap.get(c.id);
     if (!prev) return c;
-    return { ...c, contact: mergeContactPreserveDetail(prev.contact, c.contact) };
+    return {
+      ...c,
+      contact: mergeContactPreserveDetail(prev.contact, c.contact),
+      messages: chooseConversationPreview(prev.messages, c.messages),
+    };
   });
   // Preserve stub/selected conv that didn't make incoming list
   if (preserveIds && preserveIds.size > 0) {
