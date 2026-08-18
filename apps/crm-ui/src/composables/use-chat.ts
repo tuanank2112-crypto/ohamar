@@ -892,15 +892,16 @@ export function useChat() {
           updatedContact.lastActivity = data.message.sentAt;
         }
         const isOpen = cur.id === selectedConvId.value;
-        // FIX 2026-08-18: Dùng chooseConversationPreview để chọn tin mới nhất thay vì
-        // slice(0,1) — tránh preview cũ "dính" sau khi vào xem chat (cur.messages undefined
-        // khi quay ra → giữ socket preview cũ). chooseConversationPreview so sánh timestamp
-        // + zaloMsgIdNum để luôn giữ tin mới nhất (socket vs server preview).
+        // FIX 2026-08-18 v2: Socket event TIN MỚI → LUÔN dùng tin mới làm preview.
+        // Bug: chooseConversationPreview(cur.messages, [new]) so sánh timestamp → nếu
+        // cur.messages có preview CŨ với timestamp lệch (clock skew/stale) → giữ preview cũ!
+        // Root cause: cur.messages là state CŨ (có thể từ socket event trước, chưa sync server).
+        // Fix: Socket event = tin MỚI VỪA ĐẾN → LUÔN dùng làm preview, KHÔNG so sánh với cũ.
         const conv = {
           ...cur,
           contact: updatedContact,
           lastMessageAt: data.message.sentAt,
-          messages: chooseConversationPreview(cur.messages, [data.message]),
+          messages: [data.message], // Tin mới từ socket LUÔN là preview mới nhất
           unreadCount: (data.message.senderType !== 'self' && !isOpen)
             ? (cur.unreadCount ?? 0) + 1
             : cur.unreadCount,
