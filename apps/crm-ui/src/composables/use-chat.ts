@@ -533,6 +533,30 @@ export function useChat() {
       if (isConvCurrent(convId)) {
         messagesCache.set(convId, [...messages.value]);
       }
+      // 2026-08-18 FIX: Cập nhật preview trong conversation list sau khi fetch messages.
+      // Bug: preview cũ từ socket vẫn hiển thị sau khi vào xem chat (đặc biệt group chat).
+      // Root cause: fetchMessages chỉ update messages.value, KHÔNG update conv.lastMessage.
+      // Fix: Sau khi có messages từ server, tìm tin mới nhất và cập nhật preview.
+      if (isConvCurrent(convId) && messages.value.length > 0) {
+        const conv = conversations.value.find(c => c.id === convId);
+        if (conv) {
+          const latestMsg = messages.value[messages.value.length - 1];
+          const serverPreview: ConversationMessage = {
+            content: latestMsg.content,
+            contentType: latestMsg.contentType,
+            senderType: latestMsg.senderType,
+            sentAt: latestMsg.sentAt,
+            isDeleted: latestMsg.isDeleted,
+            id: latestMsg.id,
+            zaloMsgId: latestMsg.zaloMsgId,
+            editedAt: latestMsg.editedAt,
+          };
+          // chooseConversationPreview nhận array, trả array
+          const existingArray = conv.lastMessage ? [conv.lastMessage] : null;
+          const result = chooseConversationPreview(existingArray, [serverPreview]);
+          conv.lastMessage = result?.[0] ?? serverPreview;
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     } finally {
