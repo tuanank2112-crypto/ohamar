@@ -533,13 +533,14 @@ export function useChat() {
       if (isConvCurrent(convId)) {
         messagesCache.set(convId, [...messages.value]);
       }
-      // 2026-08-18 FIX: Cập nhật preview trong conversation list sau khi fetch messages.
+      // 2026-08-18 FIX v2: Cập nhật preview trong conversation list sau khi fetch messages.
       // Bug: preview cũ từ socket vẫn hiển thị sau khi vào xem chat (đặc biệt group chat).
-      // Root cause: fetchMessages chỉ update messages.value, KHÔNG update conv.lastMessage.
-      // Fix: Sau khi có messages từ server, tìm tin mới nhất và cập nhật preview.
+      // Root cause: fetchMessages chỉ update messages.value, KHÔNG update conv.messages (preview).
+      // Fix v2: Tạo OBJECT MỚI cho conv thay vì mutate in-place → trigger Vue re-render.
       if (isConvCurrent(convId) && messages.value.length > 0) {
-        const conv = conversations.value.find(c => c.id === convId);
-        if (conv) {
+        const idx = conversations.value.findIndex(c => c.id === convId);
+        if (idx !== -1) {
+          const cur = conversations.value[idx];
           const latestMsg = messages.value[messages.value.length - 1];
           const serverPreview: ConversationMessage = {
             content: latestMsg.content,
@@ -551,10 +552,12 @@ export function useChat() {
             zaloMsgId: latestMsg.zaloMsgId,
             editedAt: latestMsg.editedAt,
           };
-          // chooseConversationPreview nhận array, trả array
-          const existingArray = conv.lastMessage ? [conv.lastMessage] : null;
-          const result = chooseConversationPreview(existingArray, [serverPreview]);
-          conv.lastMessage = result?.[0] ?? serverPreview;
+          // Thay thế conversation bằng object mới → trigger Vue reactivity
+          conversations.value.splice(idx, 1, {
+            ...cur,
+            lastMessageAt: latestMsg.sentAt,
+            messages: [serverPreview], // Preview mới nhất từ server
+          } as typeof cur);
         }
       }
     } catch (err) {
