@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 Nguyễn Tiến Lộc -->
 <!--
   ArchivedNicksPanel — T13 (2026-06-21): tab "Nick đã xóa".
   Admin/chủ tổ chức xem mọi nick đã ẩn của org; sale thường chỉ thấy nick đã xóa của mình.

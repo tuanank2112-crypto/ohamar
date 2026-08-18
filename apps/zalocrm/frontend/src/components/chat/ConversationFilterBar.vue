@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 Nguyễn Tiến Lộc -->
 <template>
   <div class="cfb" :class="{ 'cfb--topbar': layout === 'topbar' }">
     <!-- 4 tabs row — Main Tab style, chia 4 equal, KHÔNG icon KHÔNG count.

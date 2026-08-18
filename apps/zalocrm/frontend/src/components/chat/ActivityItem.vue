@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 Nguyễn Tiến Lộc -->
 <template>
   <div class="activity-item" :class="`cat-${item.category || 'system'}`">
     <CoolIcon :name="icon" :size="16" class="act-icon" :style="`color: ${categoryColor}`" />

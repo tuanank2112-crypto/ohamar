@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 Nguyễn Tiến Lộc -->
 <!--
   Community-edition stub cho thanh timeline 24h "lead đã báo" (open-core).
   Render rỗng — tính năng Extension (lead-notify), vắng ở bản này.

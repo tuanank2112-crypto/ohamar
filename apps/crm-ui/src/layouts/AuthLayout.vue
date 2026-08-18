@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 Nguyễn Tiến Lộc -->
 <template>
   <!-- Login Monarch dùng bố cục hai cột; các luồng auth khác dùng khung một cột. -->
   <v-app class="auth-shell monarch-auth-shell monarch-ui">

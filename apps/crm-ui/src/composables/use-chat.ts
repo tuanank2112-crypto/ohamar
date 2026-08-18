@@ -11,6 +11,7 @@ import { useWorkScope } from '@/composables/use-work-scope';
 import { classifyIncoming } from '@/composables/work-scope-logic';
 import { useToast } from '@/composables/use-toast';
 import { mergeConversationList } from '@/composables/conversation-list-state';
+import { chooseConversationPreview } from '@/composables/conversation-preview';
 
 interface ZaloAccount {
   id: string;
@@ -861,12 +862,15 @@ export function useChat() {
           updatedContact.lastActivity = data.message.sentAt;
         }
         const isOpen = cur.id === selectedConvId.value;
+        // FIX 2026-08-18: Dùng chooseConversationPreview để chọn tin mới nhất thay vì
+        // slice(0,1) — tránh preview cũ "dính" sau khi vào xem chat (cur.messages undefined
+        // khi quay ra → giữ socket preview cũ). chooseConversationPreview so sánh timestamp
+        // + zaloMsgIdNum để luôn giữ tin mới nhất (socket vs server preview).
         const conv = {
           ...cur,
           contact: updatedContact,
           lastMessageAt: data.message.sentAt,
-          // preview tin mới nhất ngay
-          messages: [data.message, ...(cur.messages || [])].slice(0, 1),
+          messages: chooseConversationPreview(cur.messages, [data.message]),
           unreadCount: (data.message.senderType !== 'self' && !isOpen)
             ? (cur.unreadCount ?? 0) + 1
             : cur.unreadCount,

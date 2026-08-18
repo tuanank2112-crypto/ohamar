@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 Nguyễn Tiến Lộc -->
 <template>
   <MobileChatView v-if="isMobile" />
   <div v-else class="smax-chat-grid" :class="{ 'smax-chat-grid--thread-open': !!selectedConvId }">

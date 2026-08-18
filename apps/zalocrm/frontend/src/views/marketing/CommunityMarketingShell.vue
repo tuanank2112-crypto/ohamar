@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 Nguyễn Tiến Lộc -->
 <!--
   CommunityMarketingShell — menu Marketing cho bản COMMUNITY (open-core).
   Chỉ gồm chức năng CORE: Quét nhóm + Tệp khách hàng. KHÔNG chứa chức năng EE
